@@ -81,9 +81,9 @@ public class MTEMEAssemblyLineOpticalBus extends MTEAbstractAssemblyLineBus impl
 
 	@Override
 	protected void populateUI(ModularPanel panel, PanelSyncManager sync) {
-		var row = Flow.row();
+		var row = Flow.row().left(8);
 		for (var option : substitutionStorage.getOptions()) {
-			row.child(new SubstitutionSlotWidget().oreDict(option).size(18));
+			row.child(new SubstitutionSlotWidget().storage(substitutionStorage, option));
 		}
 		panel.child(row);
 	}

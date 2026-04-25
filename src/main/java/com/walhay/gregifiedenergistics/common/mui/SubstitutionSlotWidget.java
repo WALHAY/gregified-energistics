@@ -1,18 +1,37 @@
 package com.walhay.gregifiedenergistics.common.mui;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
+<<<<<<< HEAD
+||||||| parent of f2ab357 (Substitution GUI almost done)
+import com.cleanroommc.modularui.api.drawable.IDrawable.DrawableWidget;
+=======
+import com.cleanroommc.modularui.api.drawable.IDrawable;
+>>>>>>> f2ab357 (Substitution GUI almost done)
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.value.ISyncOrValue;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
+<<<<<<< HEAD
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
+||||||| parent of f2ab357 (Substitution GUI almost done)
+import com.cleanroommc.modularui.screen.ModularPanel;
+=======
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.value.sync.SyncHandler;
+>>>>>>> f2ab357 (Substitution GUI almost done)
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Grid;
+<<<<<<< HEAD
 import com.walhay.gregifiedenergistics.api.patterns.ISubstitutionStorage;
 import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
+||||||| parent of f2ab357 (Substitution GUI almost done)
+=======
+import com.walhay.gregifiedenergistics.api.patterns.ISubstitutionStorage;
+import gregtech.api.mui.GTGuiTextures;
+>>>>>>> f2ab357 (Substitution GUI almost done)
 import gregtech.api.unification.OreDictUnifier;
 import java.io.IOException;
 import java.util.List;
@@ -68,6 +87,7 @@ public class SubstitutionSlotWidget extends Widget<SubstitutionSlotWidget> imple
 					(parentPanel, player) -> {
 						int height = (int) Math.ceil(items.size() / 5.0f);
 
+<<<<<<< HEAD
 						var selectedItem = items.get(syncHandler.getOption());
 						return GTGuis.createPopupPanel("selector_panel_" + name, 104, height * 18 + 50)
 								.child(IKey.lang("gregifiedenergistics.gui.substitution")
@@ -103,6 +123,60 @@ public class SubstitutionSlotWidget extends Widget<SubstitutionSlotWidget> imple
 		return selectorPanel;
 	}
 
+||||||| parent of f2ab357 (Substitution GUI almost done)
+	private ModularPanel buildUI() {
+		int sq = (int) Math.sqrt(items.size());
+
+		var panel = ModularPanel.defaultPanel("selector_panel_" + oreDict, 18 * sq + 12, 18 * sq + 12);
+
+		var grid = new Grid()
+				.pos(6, 6)
+				.height(sq * 18)
+				.minElementMargin(0)
+				.minColWidth(18)
+				.minRowHeight(18)
+				.mapTo(sq, items.size(), index -> {
+					var widget = new DrawableWidget(new ItemDrawable(items.get(index)));
+					widget.onUpdateListener(this::listener);
+					return widget;
+				});
+
+		panel.child(IKey.lang(oreDict).asWidget());
+		panel.child(grid);
+
+		return panel;
+	}
+
+	private void listener(DrawableWidget widget) {
+		GTLog.logger.info("Hello world");
+	}
+
+=======
+	private ModularPanel buildUI() {
+		int sq = (int) Math.sqrt(items.size());
+
+		var panel = ModularPanel.defaultPanel("selector_panel_" + name, 18 * sq + 12, 18 * sq + 12);
+
+		var grid = new Grid()
+				.pos(6, 6)
+				.height(sq * 18)
+				.minElementMargin(0)
+				.minColWidth(18)
+				.minRowHeight(18)
+				.mapTo(sq, items.size(), index -> {
+					var widget = new ButtonWidget<>()
+							.background(IDrawable.of(GTGuiTextures.SLOT, new ItemDrawable(items.get(index))))
+							.onMousePressed(button -> this.syncHandler.setSubstitution(index));
+					return widget;
+				});
+
+		panel.child(IKey.lang(name).asWidget());
+		panel.child(grid);
+
+		return panel;
+	}
+
+>>>>>>> f2ab357 (Substitution GUI almost done)
 	@Override
 	public @NotNull Result onMousePressed(int mouseButton) {
 		selectorPanel().togglePanel();
