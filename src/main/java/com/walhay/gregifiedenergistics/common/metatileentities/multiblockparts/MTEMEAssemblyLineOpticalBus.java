@@ -36,7 +36,6 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.capabilities.Capability;
 import org.jetbrains.annotations.NotNull;
-import scala.actors.migration.pattern;
 
 public class MTEMEAssemblyLineOpticalBus extends MTEAbstractAssemblyLineBus implements IOpticalNetRecipeHandler {
 
