@@ -1,36 +1,13 @@
 package com.walhay.gregifiedenergistics.common.mui;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
-<<<<<<< HEAD
-<<<<<<< HEAD
-||||||| parent of f2ab357 (Substitution GUI almost done)
-import com.cleanroommc.modularui.api.drawable.IDrawable.DrawableWidget;
-=======
-import com.cleanroommc.modularui.api.drawable.IDrawable;
->>>>>>> f2ab357 (Substitution GUI almost done)
-||||||| parent of 1f5c0c3 (Improve GUI)
-import com.cleanroommc.modularui.api.drawable.IDrawable;
-=======
->>>>>>> 1f5c0c3 (Improve GUI)
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.value.ISyncOrValue;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.api.widget.Interactable.Result;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
-<<<<<<< HEAD
-<<<<<<< HEAD
 import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
-||||||| parent of f2ab357 (Substitution GUI almost done)
-import com.cleanroommc.modularui.screen.ModularPanel;
-=======
-import com.cleanroommc.modularui.screen.ModularPanel;
-||||||| parent of 1f5c0c3 (Improve GUI)
-import com.cleanroommc.modularui.screen.ModularPanel;
-=======
-import com.cleanroommc.modularui.utils.Alignment;
->>>>>>> 1f5c0c3 (Improve GUI)
-import com.cleanroommc.modularui.value.sync.SyncHandler;
->>>>>>> f2ab357 (Substitution GUI almost done)
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
 import com.cleanroommc.modularui.widgets.layout.Grid;

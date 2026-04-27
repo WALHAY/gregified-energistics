@@ -8,14 +8,11 @@ import codechicken.lib.raytracer.CuboidRayTraceResult;
 import codechicken.lib.render.CCRenderState;
 import codechicken.lib.render.pipeline.IVertexOperation;
 import codechicken.lib.vec.Matrix4;
-import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.value.sync.*;
-import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.walhay.gregifiedenergistics.api.capability.GregifiedEnergisticsCapabilities;
 import com.walhay.gregifiedenergistics.api.capability.INetRecipeHandler;
 import com.walhay.gregifiedenergistics.api.capability.IOpticalNetRecipeHandler;
 import com.walhay.gregifiedenergistics.api.patterns.implementations.RecipePatternHelper;
-import com.walhay.gregifiedenergistics.common.mui.SubstitutionSlotWidget;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
 import gregtech.api.recipes.Recipe;
@@ -76,15 +73,6 @@ public class MTEMEAssemblyLineOpticalBus extends MTEAbstractAssemblyLineBus impl
 		}
 
 		return super.onScrewdriverClick(playerIn, hand, facing, hitResult);
-	}
-
-	@Override
-	protected void populateUI(ModularPanel panel, PanelSyncManager sync) {
-		var row = Flow.row().left(8);
-		for (var option : substitutionStorage.getOptions()) {
-			row.child(new SubstitutionSlotWidget().storage(substitutionStorage, option));
-		}
-		panel.child(row);
 	}
 
 	@Override
