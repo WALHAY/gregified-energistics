@@ -15,7 +15,6 @@ import com.walhay.gregifiedenergistics.api.patterns.ISubstitutionStorage;
 import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.unification.OreDictUnifier;
-import gregtech.api.util.GTLog;
 import java.io.IOException;
 import java.util.List;
 import net.minecraft.item.ItemStack;
@@ -40,9 +39,7 @@ public class SubstitutionSlotWidget extends Widget<SubstitutionSlotWidget> imple
 
 	public SubstitutionSlotWidget storage(ISubstitutionStorage storage, String name) {
 		this.name = name;
-		GTLog.logger.info(String.format("Name: %s", name));
 		this.items = OreDictUnifier.getAllWithOreDictionaryName(name);
-		GTLog.logger.info(String.format("Items: %s\n", items));
 		this.syncHandler = new SubstituionSyncHandler(storage, name);
 		setSyncOrValue(syncHandler);
 
