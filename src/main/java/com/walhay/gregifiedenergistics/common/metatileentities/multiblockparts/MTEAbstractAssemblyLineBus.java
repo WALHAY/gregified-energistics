@@ -9,12 +9,10 @@ import appeng.api.AEApi;
 import appeng.api.config.Actionable;
 import appeng.api.networking.crafting.ICraftingPatternDetails;
 import appeng.api.networking.crafting.ICraftingProviderHelper;
-import appeng.api.networking.events.MENetworkCraftingPatternChange;
 import appeng.api.storage.channels.IFluidStorageChannel;
 import appeng.api.storage.data.IAEFluidStack;
 import appeng.me.GridAccessException;
 import appeng.util.InventoryAdaptor;
-import appeng.util.Platform;
 import appeng.util.inv.AdaptorItemHandler;
 import codechicken.lib.raytracer.CuboidRayTraceResult;
 import codechicken.lib.render.CCRenderState;
@@ -659,19 +657,6 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 
 		if (fluidWaitingToSend.isEmpty()) {
 			fluidWaitingToSend = null;
-		}
-	}
-
-	// notify grid network when patterns should be recalculated
-	public void notifyPatternChange() {
-		if (Platform.isServer() && getProxy() != null) {
-			try {
-				getProxy()
-						.getGrid()
-						.postEvent(new MENetworkCraftingPatternChange(
-								getCraftingProvider(), getProxy().getNode()));
-			} catch (GridAccessException ignored) {
-			}
 		}
 	}
 
