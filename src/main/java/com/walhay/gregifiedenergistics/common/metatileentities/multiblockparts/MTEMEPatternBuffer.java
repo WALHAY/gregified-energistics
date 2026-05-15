@@ -1,22 +1,36 @@
 package com.walhay.gregifiedenergistics.common.metatileentities.multiblockparts;
 
 import static gregtech.api.GTValues.ZPM;
+import static gregtech.api.metatileentity.multiblock.MultiblockAbility.IMPORT_FLUIDS;
+import static gregtech.api.metatileentity.multiblock.MultiblockAbility.IMPORT_ITEMS;
 
+import appeng.api.AEApi;
+import appeng.api.config.Actionable;
 import appeng.api.networking.crafting.ICraftingPatternDetails;
 import appeng.api.networking.crafting.ICraftingProviderHelper;
+import appeng.api.networking.storage.IStorageGrid;
+import appeng.api.storage.IMEInventory;
+import appeng.api.storage.channels.IFluidStorageChannel;
 import appeng.api.storage.channels.IItemStorageChannel;
+import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IAEItemStack;
+import appeng.fluids.util.AEFluidStack;
 import appeng.items.misc.ItemEncodedPattern;
+import appeng.util.item.AEItemStack;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
+import com.glodblock.github.common.item.fake.FakeFluids;
+import com.glodblock.github.common.item.fake.FakeItemRegister;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
+import gregtech.api.capability.IMultipleTankHandler;
 import gregtech.api.capability.impl.FluidTankList;
 import gregtech.api.capability.impl.ItemHandlerList;
+import gregtech.api.capability.impl.NotifiableFluidTank;
 import gregtech.api.capability.impl.NotifiableItemStackHandler;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
@@ -27,19 +41,22 @@ import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.util.GTLog;
 import gregtech.api.util.GTTransferUtils;
-import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.INBTSerializable;
+import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidTank;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
@@ -50,48 +67,31 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		implements IMultiblockAbilityPart<IItemHandlerModifiable> {
 	private boolean isWorkingEnabled = true;
 
-	private PatternContainer[] containers;
-	private final PatternBuffer patternInventory = new PatternBuffer(36);
+	private final PatternHandler patternHandler;
 
 	public MTEMEPatternBuffer(ResourceLocation metaTileEntityId) {
 		super(metaTileEntityId, ZPM, false, IItemStorageChannel.class);
-	}
-
-	@Override
-	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
-		super.clearMachineInventory(itemBuffer);
-		patternInventory.refundAll();
-		for (int i = 0; i < patternInventory.getSlots(); ++i) {
-			itemBuffer.add(patternInventory.getStackInSlot(i));
-		}
-
-		for (var container : patternInventory.getContainers()) {
-			if (container == null) continue;
-			var inventory = container.inventory();
-			for (int j = 0; j < inventory.getSlots(); ++j) {
-				itemBuffer.add(inventory.getStackInSlot(j));
-			}
-		}
-	}
-
-	@Override
-	public IFluidHandler getFluidInventory() {
-		return new FluidTankList(true);
+		this.patternHandler = new PatternHandler(36);
 	}
 
 	@Override
 	protected IItemHandlerModifiable createImportItemHandler() {
-		if (containers == null) {
-			this.containers = new PatternContainer[36];
-			for (int i = 0; i < containers.length; ++i) {
-				this.containers[i] = new PatternContainer();
-			}
+		if (patternHandler == null || patternHandler.getContainers() == null)
+			return new ItemHandlerList(Collections.emptyList());
+		return new ItemHandlerList(patternHandler.getContainers().stream()
+				.map(PatternContainer::inventory)
+				.filter(Objects::nonNull)
+				.collect(Collectors.toList()));
+	}
+
+	@Override
+	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
+		for (var container : patternHandler.containers) {
+			container.refundItems();
+			container.refundFluids();
 		}
 
-		List<IItemHandler> handlers =
-				Arrays.stream(containers).map(PatternContainer::inventory).collect(Collectors.toList());
-
-		return new ItemHandlerList(handlers);
+		super.clearMachineInventory(itemBuffer);
 	}
 
 	@Override
@@ -101,14 +101,16 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 	@Override
 	public void setWorkingEnabled(boolean isWorkingEnabled) {
-		this.isWorkingEnabled = isWorkingEnabled;
-		notifyPatternChange();
+		if (this.isWorkingEnabled != isWorkingEnabled) {
+			this.isWorkingEnabled = isWorkingEnabled;
+			notifyPatternChange();
+		}
 	}
 
 	@Override
 	public void provideCrafting(ICraftingProviderHelper provider) {
 		if (isAttachedToMultiBlock() && isWorkingEnabled()) {
-			for (var pattern : patternInventory.getPatterns()) {
+			for (var pattern : patternHandler.getPatterns()) {
 				if (pattern == null) continue;
 
 				provider.addCraftingOption(getCraftingProvider(), pattern);
@@ -128,9 +130,9 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 	@Override
 	public boolean pushPattern(ICraftingPatternDetails pattern, InventoryCrafting inventory) {
-		if (!isWorkingEnabled() || !patternInventory.contains(pattern)) return false;
+		if (!isWorkingEnabled() || !patternHandler.contains(pattern)) return false;
 
-		var container = patternInventory.getContainer(pattern);
+		var container = patternHandler.getContainer(pattern);
 		GTLog.logger.info("Insert into container: " + container);
 		if (container != null) {
 			container.insertInventory(inventory);
@@ -150,7 +152,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 		panel.child(SlotGroupWidget.builder()
 				.matrix("IIIIIIIII", "IIIIIIIII", "IIIIIIIII", "IIIIIIIII")
-				.key('I', index -> new ItemSlot().slot(patternInventory, index))
+				.key('I', index -> new ItemSlot().slot(patternHandler, index))
 				.build()
 				.horizontalCenter()
 				.top(7));
@@ -165,19 +167,25 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		return new MTEMEPatternBuffer(metaTileEntityId);
 	}
 
-	public MultiblockAbility<IItemHandlerModifiable> getAbility() {
-		return MultiblockAbility.IMPORT_ITEMS;
+	@Override
+	public @NotNull List<MultiblockAbility<?>> getAbilities() {
+		return Arrays.asList(IMPORT_ITEMS, IMPORT_FLUIDS);
 	}
 
 	@Override
 	public void registerAbilities(@NotNull AbilityInstances ability) {
-		ability.add(this.importItems);
+		for (var container : patternHandler) {
+			ability.add(
+					ability.isKey(IMPORT_ITEMS)
+							? container.inventory()
+							: container.fluidInventory().getFluidTanks());
+		}
 	}
 
 	@Override
 	public NBTTagCompound writeToNBT(NBTTagCompound data) {
 		super.writeToNBT(data);
-		data.setTag("PatternInventory", patternInventory.serializeNBT());
+		data.setTag("PatternInventory", patternHandler.serializeNBT());
 		return data;
 	}
 
@@ -185,23 +193,23 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	public void readFromNBT(NBTTagCompound data) {
 		super.readFromNBT(data);
 		if (data.hasKey("PatternInventory")) {
-			patternInventory.deserializeNBT(data.getCompoundTag("PatternInventory"));
+			patternHandler.deserializeNBT(data.getCompoundTag("PatternInventory"));
 		}
 	}
 
-	@Override
-	public void notifyPatternChange() {
-		super.notifyPatternChange();
-	}
-
 	/** PatternBuffer */
-	private class PatternBuffer extends AbstractPatternItemHandler {
+	private class PatternHandler extends AbstractPatternItemHandler implements Iterable<PatternContainer> {
 
-		private final Object2ObjectArrayMap<ICraftingPatternDetails, PatternContainer> patternToContainer;
+		private final PatternContainer[] containers;
+		private final Object2ObjectOpenHashMap<ICraftingPatternDetails, PatternContainer> patternToContainer;
 
-		public PatternBuffer(int size) {
+		public PatternHandler(int size) {
 			super(size);
-			this.patternToContainer = new Object2ObjectArrayMap<>(size);
+			this.containers = new PatternContainer[size];
+			for (int i = 0; i < size; ++i) {
+				this.containers[i] = new PatternContainer();
+			}
+			this.patternToContainer = new Object2ObjectOpenHashMap<>(size);
 		}
 
 		public boolean contains(ICraftingPatternDetails pattern) {
@@ -217,7 +225,22 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			return Arrays.asList(containers);
 		}
 
-		public void refundAll() {}
+		private PatternContainer getFreeContainer() {
+			return getContainers().stream()
+					.filter(p -> p != null && p.pattern == null)
+					.findFirst()
+					.orElse(null);
+		}
+
+		private void attachContainerToPattern(ICraftingPatternDetails pattern) {
+			if (pattern == null) return;
+
+			var container = getFreeContainer();
+			if (container == null) return;
+
+			patternToContainer.put(pattern, container);
+			container.setPattern(pattern);
+		}
 
 		@Override
 		protected void onLoad() {
@@ -225,9 +248,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			for (int i = 0; i < getSlots(); ++i) {
 				var pattern = getPatternDetails(i);
 
-				if (pattern == null) continue;
-
-				assignContainerToPattern(pattern);
+				attachContainerToPattern(pattern);
 			}
 		}
 
@@ -237,23 +258,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				return encodedPattern.getPatternForItem(stack, getWorld());
 			}
 			return null;
-		}
-
-		private PatternContainer getFreeContainer() {
-			return Arrays.stream(containers)
-					.filter(p -> p.pattern == null)
-					.findFirst()
-					.orElse(null);
-		}
-
-		private void assignContainerToPattern(ICraftingPatternDetails pattern) {
-			if (pattern == null) return;
-
-			var container = getFreeContainer();
-			if (container == null) return;
-
-			patternToContainer.put(pattern, container);
-			container.setPattern(pattern);
 		}
 
 		@Override
@@ -266,19 +270,23 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				var container = getContainer(oldPattern);
 				if (container != null) {
 					container.setPattern(null);
-					container.refundItems();
 					patternToContainer.remove(oldPattern, container);
 				}
-				// refund old pattern container
+				// TODO: refund old pattern container
 				return;
 			}
 
-			assignContainerToPattern(pattern);
+			attachContainerToPattern(pattern);
 		}
 
 		@Override
 		protected void onPatternUpdate() {
 			notifyPatternChange();
+		}
+
+		@Override
+		public Iterator<PatternContainer> iterator() {
+			return getContainers().iterator();
 		}
 	}
 
@@ -292,24 +300,29 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	private class PatternContainer implements INBTSerializable<NBTTagCompound> {
 
 		private ICraftingPatternDetails pattern;
-		private PatternBufferStackHandler items;
-		// private List<FluidStack> fluids;
+		private PatternBufferStackHandler inventory;
+		private FluidTankList fluidInventory;
 
 		public PatternContainer() {
-			this(null);
-		}
-
-		public PatternContainer(ICraftingPatternDetails pattern) {
-			this.items = new PatternBufferStackHandler(pattern);
-			this.pattern = pattern;
+			this.inventory = new PatternBufferStackHandler();
+			List<FluidTank> tanks = new ArrayList<>();
+			for (int i = 0; i < 9; ++i) {
+				tanks.add(new NotifiableFluidTank(Integer.MAX_VALUE, MTEMEPatternBuffer.this, false));
+			}
+			this.fluidInventory = new FluidTankList(false, tanks);
 		}
 
 		public void setPattern(ICraftingPatternDetails pattern) {
 			this.pattern = pattern;
+			this.inventory.setPattern(pattern);
 		}
 
-		public IItemHandlerModifiable inventory() {
-			return items;
+		@NotNull public IItemHandlerModifiable inventory() {
+			return inventory;
+		}
+
+		@NotNull public IMultipleTankHandler fluidInventory() {
+			return fluidInventory;
 		}
 
 		@Nullable public ICraftingPatternDetails getPattern() {
@@ -324,39 +337,121 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 				if (stack == null || stack.isEmpty()) continue;
 
-				GTLog.logger.info("Insert into container: " + stack.getDisplayName());
+				if (FakeFluids.isFluidFakeItem(stack)) {
+					FluidStack fluidStack = FakeItemRegister.getStack(stack);
+					if (fluidStack == null) continue;
+					insertFluid(fluidStack);
+					continue;
+				}
+
 				insertItem(stack);
 			}
 		}
 
 		public void insertItem(ItemStack stack) {
-			GTLog.logger.info("Trying to insert simulate");
-			var result = GTTransferUtils.insertItem(items, stack, true);
-			GTLog.logger.info("Result: " + result);
+			var result = GTTransferUtils.insertItem(inventory, stack, true);
 			if (!result.isEmpty()) return;
 
-			var res = GTTransferUtils.insertItem(items, stack, false);
-			GTLog.logger.info("Successfully inserted simulate: " + stack + "\nRemaining real: " + res);
+			GTTransferUtils.insertItem(inventory, stack, false);
 		}
 
-		public void refundItems() {}
+		public void insertFluid(FluidStack stack) {
+			if (stack == null) return;
+
+			fluidInventory.fill(stack, true);
+		}
+
+		public void refundItems() {
+			var node = getProxy().getNode();
+			if (node == null) return;
+
+			var grid = node.getGrid();
+			if (grid == null) return;
+
+			IStorageGrid storage = grid.getCache(IStorageGrid.class);
+			if (storage == null) return;
+
+			IMEInventory<IAEItemStack> meInventory = storage.getInventory(getStorageChannel());
+			if (meInventory == null) return;
+
+			for (int i = 0; i < inventory.size(); ++i) {
+				var stack = inventory.getStackInSlot(i);
+
+				if (stack == null || stack.isEmpty()) continue;
+
+				IAEItemStack remainder = meInventory.injectItems(
+						AEItemStack.fromItemStack(stack), Actionable.MODULATE, getActionSource());
+				if (remainder == null) continue;
+
+				inventory.setStackInSlot(i, remainder.asItemStackRepresentation());
+			}
+		}
+
+		public void refundFluids() {
+			var node = getProxy().getNode();
+			if (node == null) return;
+
+			var grid = node.getGrid();
+			if (grid == null) return;
+
+			IFluidStorageChannel fluidChannel =
+					AEApi.instance().storage().getStorageChannel(IFluidStorageChannel.class);
+
+			IStorageGrid storage = grid.getCache(IStorageGrid.class);
+			if (storage == null) return;
+
+			IMEInventory<IAEFluidStack> meInventory = storage.getInventory(fluidChannel);
+			if (meInventory == null) return;
+
+			for (var tank : fluidInventory.getFluidTanks()) {
+				var fluid = tank.getFluid();
+
+				if (fluid == null || fluid.amount <= 0) continue;
+
+				IAEFluidStack aeFluid = AEFluidStack.fromFluidStack(fluid);
+
+				IAEFluidStack remainder = meInventory.injectItems(aeFluid, Actionable.MODULATE, getActionSource());
+				if (remainder == null) continue;
+
+				int toDrain = fluid.amount - (int) remainder.getStackSize();
+
+				tank.drain(toDrain, true);
+			}
+		}
 
 		@Override
 		public NBTTagCompound serializeNBT() {
 			var nbt = new NBTTagCompound();
 
+			nbt.setTag("Inventory", inventory.serializeNBT());
+			nbt.setTag("FluidInventory", fluidInventory.serializeNBT());
+
 			return nbt;
 		}
 
 		@Override
-		public void deserializeNBT(NBTTagCompound nbt) {}
+		public void deserializeNBT(NBTTagCompound nbt) {
+			if (nbt.hasKey("Inventory")) {
+				inventory.deserializeNBT(nbt.getCompoundTag("Inventory"));
+			}
+			if (nbt.hasKey("FluidInventory")) {
+				fluidInventory.deserializeNBT(nbt.getCompoundTag("FluidInventory"));
+			}
+		}
 	}
 
 	/** Storage with unlimited space */
 	private class PatternBufferStackHandler extends NotifiableItemStackHandler {
 
-		private PatternBufferStackHandler(ICraftingPatternDetails pattern) {
-			super(MTEMEPatternBuffer.this, 16, MTEMEPatternBuffer.this.getController(), false);
+		private PatternBufferStackHandler() {
+			super(MTEMEPatternBuffer.this, 0, MTEMEPatternBuffer.this.getController(), false);
+		}
+
+		public void setPattern(ICraftingPatternDetails pattern) {
+			var size =
+					pattern == null || pattern.getCondensedInputs() == null ? 0 : pattern.getCondensedOutputs().length;
+
+			setSize(size);
 		}
 
 		@Override
