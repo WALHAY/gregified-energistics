@@ -25,3 +25,7 @@ gregifiedenergistics.tool_action.screwdriwer.optical_facing=§8Use Screwdriwer t
 
 gregifiedenergistics.machine.me.copy_settings=Saved settings to Memory Card
 gregifiedenergistics.machine.me.paste_settings=Applied settings from Memory Card
+
+gregifiedenergistics.gui.substitution=Substitutions
+gregifiedenergistics.gui.substitution_list=List of Substitutions
+gregifiedenergistics.gui.pattern_list=Patterns

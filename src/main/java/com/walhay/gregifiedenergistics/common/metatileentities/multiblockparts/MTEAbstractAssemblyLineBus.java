@@ -1,7 +1,9 @@
 package com.walhay.gregifiedenergistics.common.metatileentities.multiblockparts;
 
+import static com.walhay.gregifiedenergistics.api.mui.GregifiedEnergisticsGuiTextures.BLOCKING_MODE;
 import static com.walhay.gregifiedenergistics.api.patterns.substitutions.SubstitutionStorage.STORAGE_TAG;
 import static com.walhay.gregifiedenergistics.api.util.BlockingMode.BLOCKING_MODE_TAG;
+import static gregtech.api.mui.GTGuiTextures.BUTTON_POWER;
 
 import appeng.api.AEApi;
 import appeng.api.config.Actionable;
@@ -18,31 +20,43 @@ import codechicken.lib.raytracer.CuboidRayTraceResult;
 import codechicken.lib.render.CCRenderState;
 import codechicken.lib.render.pipeline.IVertexOperation;
 import codechicken.lib.vec.Matrix4;
-import com.walhay.gregifiedenergistics.GregifiedEnergisticsConfig;
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.ItemDrawable;
+import com.cleanroommc.modularui.factory.PosGuiData;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
+import com.cleanroommc.modularui.value.sync.EnumSyncValue;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.widget.Widget;
+import com.cleanroommc.modularui.widgets.CycleButtonWidget;
+import com.cleanroommc.modularui.widgets.ListWidget;
+import com.cleanroommc.modularui.widgets.PageButton;
+import com.cleanroommc.modularui.widgets.PagedWidget;
+import com.cleanroommc.modularui.widgets.ToggleButton;
+import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.cleanroommc.modularui.widgets.layout.Grid;
+import com.cleanroommc.modularui.widgets.slot.ItemSlot;
+import com.google.common.collect.Lists;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
 import com.walhay.gregifiedenergistics.api.patterns.AbstractPatternHelper;
 import com.walhay.gregifiedenergistics.api.patterns.ISubstitutionNotifiable;
 import com.walhay.gregifiedenergistics.api.patterns.ISubstitutionStorage;
 import com.walhay.gregifiedenergistics.api.patterns.substitutions.SubstitutionStorage;
 import com.walhay.gregifiedenergistics.api.util.BlockingMode;
-import com.walhay.gregifiedenergistics.client.gui.GregifiedEnergisticsGuiTextures;
 import com.walhay.gregifiedenergistics.client.render.GregifiedEnergisticsTextures;
-import com.walhay.gregifiedenergistics.common.gui.SubstitutionListWidget;
+import com.walhay.gregifiedenergistics.common.mui.SubstitutionSlotWidget;
 import gregtech.api.capability.GregtechDataCodes;
 import gregtech.api.capability.GregtechTileCapabilities;
+import gregtech.api.capability.impl.GhostCircuitItemStackHandler;
 import gregtech.api.capability.impl.MultiblockRecipeLogic;
 import gregtech.api.capability.impl.NotifiableItemStackHandler;
-import gregtech.api.gui.GuiTextures;
-import gregtech.api.gui.ModularUI;
-import gregtech.api.gui.ModularUI.Builder;
-import gregtech.api.gui.widgets.*;
-import gregtech.api.gui.widgets.TabGroup.TabLocation;
-import gregtech.api.gui.widgets.tab.ItemTabInfo;
+import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
-import gregtech.api.util.Position;
-import gregtech.api.util.Size;
+import gregtech.api.mui.GTGuis;
 import gregtech.client.renderer.texture.cube.SimpleOverlayRenderer;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.util.Collection;
@@ -52,6 +66,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -59,15 +74,16 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
-import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.util.Constants.NBT;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidTank;
 import net.minecraftforge.items.IItemHandlerModifiable;
+import org.jetbrains.annotations.NotNull;
 
 public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingProvider<IAEFluidStack>
 		implements IMultiblockAbilityPart<IItemHandlerModifiable>, ISubstitutionNotifiable {
@@ -111,19 +127,15 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	}
 
 	@Override
-	public void clearMachineInventory(NonNullList<ItemStack> itemBuffer) {
+	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
 		super.clearMachineInventory(itemBuffer);
 		clearInventory(itemBuffer, importItems);
 		if (hasItemsToSend()) {
-			for (ItemStack stack : waitingToSend.values()) {
-				itemBuffer.add(stack);
-			}
+			itemBuffer.addAll(waitingToSend.values());
 
 			waitingToSend = null;
 		}
 	}
-
-	// GUI helpers
 
 	@Override
 	public void addToolUsages(ItemStack stack, World world, List<String> tooltip, boolean advanced) {
@@ -132,121 +144,118 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	}
 
 	@Override
-	protected ModularUI createUI(EntityPlayer player) {
-		ModularUI.Builder builder = createUITemplate(player);
-		return builder.build(getHolder(), player);
+	public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager sync, UISettings settings) {
+		sync.syncValue("working_enabled", new BooleanSyncValue(this::isWorkingEnabled, this::setWorkingEnabled));
+		sync.syncValue("fluid_mode", new BooleanSyncValue(this::getUsingFluids, this::setUsingFluids));
+		sync.syncValue(
+				"blocking_mode", new EnumSyncValue<>(BlockingMode.class, this::getBlockingMode, this::setBlockingMode));
+
+		ModularPanel panel = GTGuis.createPanel(this, 176, 200);
+
+		var controller = new PagedWidget.Controller();
+
+		var tabs = Flow.row()
+				.name("tab row")
+				.widthRel(1f)
+				.leftRel(0.5f)
+				.margin(3, 0)
+				.coverChildrenHeight()
+				.topRel(0f, 3, 1f);
+
+		var paged = new PagedWidget<>();
+
+		int pageCounter = 0;
+
+		var patternList = createPatternList(panel, sync);
+		if (patternList != null) {
+			tabs.child(new PageButton(pageCounter++, controller)
+					.tab(GuiTextures.TAB_TOP, 0)
+					.addTooltipLine(IKey.lang("gregtech.machine.workbench.tab.workbench"))
+					.overlay(new ItemDrawable(AEApi.instance()
+									.definitions()
+									.items()
+									.encodedPattern()
+									.maybeItem()
+									.get())
+							.asIcon()
+							.size(16)));
+		}
+
+		var substitutionList = createSubstitutionList(panel, sync);
+		if (substitutionList != null) {
+			tabs.child(new PageButton(pageCounter++, controller)
+					.tab(GuiTextures.TAB_TOP, 0)
+					.addTooltipLine(IKey.lang("gregtech.machine.workbench.tab.item_list"))
+					.addTooltipLine(
+							IKey.lang("gregtech.machine.workbench.storage_note").style(TextFormatting.DARK_GRAY))
+					.overlay(new ItemDrawable(AEApi.instance()
+									.definitions()
+									.items()
+									.memoryCard()
+									.maybeItem()
+									.get())
+							.asIcon()
+							.size(16)));
+		}
+
+		if (patternList != null) {
+			paged.addPage(patternList);
+		}
+
+		if (substitutionList != null) {
+			paged.addPage(substitutionList);
+		}
+
+		return panel.child(new ItemSlot().slot(importItems, 0).pos(7, 7).size(18))
+				.child(Flow.column()
+						.width(16)
+						.left(-18)
+						.top(0)
+						.childPadding(2)
+						.child(new ToggleButton()
+								.syncHandler("working_enabled")
+								.size(16)
+								.overlay(false, BUTTON_POWER[0])
+								.overlay(true, BUTTON_POWER[1]))
+						.child(new ToggleButton()
+								.syncHandler("fluid_mode")
+								.size(16)
+								.overlay(false, new ItemDrawable(Items.BUCKET))
+								.overlay(true, new ItemDrawable(Items.WATER_BUCKET)))
+						.child(new CycleButtonWidget()
+								.syncHandler("blocking_mode")
+								.size(16)
+								.stateOverlay(0, BLOCKING_MODE[0])
+								.stateOverlay(1, BLOCKING_MODE[1])
+								.stateOverlay(2, BLOCKING_MODE[2])))
+				.child(tabs)
+				.child(paged.top(28).widthRel(0.9f).controller(controller));
 	}
 
-	protected AbstractWidgetGroup createPatternsGrid() {
+	public Widget<?> createPatternList(ModularPanel panel, PanelSyncManager syncHandler) {
 		return null;
 	}
 
-	protected AbstractWidgetGroup createSubstitutionGrid() {
-		int slotsPerLine = GregifiedEnergisticsConfig.guiConfig.substitutionSlotsPerLine;
-		return new SubstitutionListWidget(slotsPerLine, substitutionStorage);
+	public Widget<?> createSubstitutionList(ModularPanel panel, PanelSyncManager syncHandler) {
+		return Flow.column()
+				.left(7)
+				.widthRel(0.9f)
+				.child(IKey.lang("gregifiedenergistics.gui.substitution_list").asWidget())
+				.child(new ListWidget<>()
+						.widthRel(0.9f)
+						.child(new Grid()
+								.minElementMargin(0)
+								.minColWidth(18)
+								.minRowHeight(18)
+								.coverChildren()
+								.mapTo(9, Lists.newArrayList(substitutionStorage.getOptions()), (index, name) ->
+										(Widget<?>) new SubstitutionSlotWidget().storage(substitutionStorage, name))));
 	}
 
-	private ModularUI.Builder createUITemplate(EntityPlayer player) {
-		Size patternsSize = Size.ZERO;
-		Size substitutionSize = Size.ZERO;
-
-		AbstractWidgetGroup patternsGrid = createPatternsGrid();
-		AbstractWidgetGroup substitutionGrid = createSubstitutionGrid();
-
-		if (patternsGrid != null) {
-			patternsSize = patternsGrid.getSize();
-		}
-
-		if (substitutionGrid != null) {
-			substitutionSize = substitutionGrid.getSize();
-		}
-
-		int backgroundWidth = Math.max(176, Math.max(patternsSize.width, substitutionSize.width) + 14);
-
-		int height = Math.max(18 * 4, Math.max(patternsSize.height, substitutionSize.height));
-		int center = backgroundWidth / 2;
-
-		int inventoryStartX = center - 9 - 4 * 18;
-		int inventoryStartY = 40 + height + 12;
-
-		Builder builder = ModularUI.builder(GuiTextures.BACKGROUND, backgroundWidth, 40 + height + 94);
-
-		if (patternsGrid != null || substitutionGrid != null) {
-			TabGroup<AbstractWidgetGroup> tabGroup =
-					new TabGroup<AbstractWidgetGroup>(TabLocation.HORIZONTAL_TOP_LEFT, Position.ORIGIN);
-
-			if (patternsGrid != null) {
-				patternsGrid.setSelfPosition(new Position(center - patternsSize.width / 2, 40));
-
-				tabGroup.addTab(
-						new ItemTabInfo(
-								"gregifiedenergistics.gui.patterns_grid",
-								AEApi.instance()
-										.definitions()
-										.items()
-										.encodedPattern()
-										.maybeStack(1)
-										.get()),
-						patternsGrid);
-			}
-
-			if (substitutionGrid != null) {
-				substitutionGrid.setSelfPosition(new Position(center - substitutionSize.width / 2, 40));
-
-				tabGroup.addTab(
-						new ItemTabInfo(
-								"gregifiedenergistics.gui.substitutions_grid",
-								AEApi.instance()
-										.definitions()
-										.items()
-										.memoryCard()
-										.maybeStack(1)
-										.get()),
-						substitutionGrid);
-			}
-
-			builder.widget(tabGroup);
-		}
-
-		builder.label(10, 5, getMetaFullName());
-
-		builder.dynamicLabel(
-				10,
-				15,
-				() -> isOnline
-						? I18n.format("gregtech.gui.me_network.online")
-						: I18n.format("gregtech.gui.me_network.offline"),
-				0xFFFFFFFF);
-
-		builder.widget(new SlotWidget(importItems, 0, 140, 14)
-				.setBackgroundTexture(GuiTextures.SLOT)
-				.setTooltipText(I18n.format("gregifiedenergistics.gui.item_slot")));
-
-		builder.widget(new ImageCycleButtonWidget(
-						-18,
-						6,
-						16,
-						16,
-						GregifiedEnergisticsGuiTextures.BLOCKING_MODE,
-						BlockingMode.values().length,
-						() -> blockingMode.ordinal(),
-						index -> blockingMode = BlockingMode.values()[index])
-				.setTooltipHoverString(index -> I18n.format("gregifiedenergistics.gui."
-						+ BlockingMode.values()[index].toString().toLowerCase())));
-
-		builder.widget(new ToggleButtonWidget(
-						-18,
-						24,
-						16,
-						16,
-						GregifiedEnergisticsGuiTextures.FLUID_MODE,
-						this::getUsingFluids,
-						this::setUsingFluids)
-				.setTooltipText("gregifiedenergistics.gui.fluid_mode"));
-
-		builder.bindPlayerInventory(player.inventory, GuiTextures.SLOT, inventoryStartX, inventoryStartY);
-
-		return builder;
+	@Override
+	@SuppressWarnings("UnstableApiUsage")
+	public boolean usesMui2() {
+		return true;
 	}
 
 	@Override
@@ -381,8 +390,8 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	}
 
 	@Override
-	public void registerAbilities(List<IItemHandlerModifiable> list) {
-		list.add(importItems);
+	public void registerAbilities(@NotNull AbilityInstances abilityInstances) {
+		abilityInstances.add(importItems);
 	}
 
 	@Override
@@ -492,6 +501,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	// check if buses is able to accept items from pattern
 	private boolean acceptsItems(final InventoryCrafting inventoryCrafting) {
 		List<InventoryAdaptor> inventoryAdaptors = getController().getAbilities(MultiblockAbility.IMPORT_ITEMS).stream()
+				.filter(i -> !(i instanceof GhostCircuitItemStackHandler))
 				.map(AdaptorItemHandler::new)
 				.collect(Collectors.toList());
 		Iterator<InventoryAdaptor> it = inventoryAdaptors.iterator();
@@ -578,6 +588,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	// Push items from auto-crafting to input buses
 	private void pushItemsOut() {
 		List<InventoryAdaptor> inventoryAdaptors = getController().getAbilities(MultiblockAbility.IMPORT_ITEMS).stream()
+				.filter(i -> !(i instanceof GhostCircuitItemStackHandler))
 				.map(AdaptorItemHandler::new)
 				.collect(Collectors.toList());
 

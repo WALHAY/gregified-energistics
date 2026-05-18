@@ -69,9 +69,10 @@ dependencies {
     // implementation ('com.google.code.gson:gson:2.8.6') {
     //     transitive = false
     // }
-    implementation rfg.deobf("curse.maven:codechicken-lib-1-8-242818:2779848")
 
-    implementation rfg.deobf("curse.maven:gregtech-ce-unofficial-557242:5519022")
+	api("com.cleanroommc:modularui:3.1.5") { transitive = false }
+
+    implementation rfg.deobf("curse.maven:codechicken-lib-1-8-242818:2779848")
 
     implementation rfg.deobf("curse.maven:applied-energistic-2-extended-life-570458:4646658")
 

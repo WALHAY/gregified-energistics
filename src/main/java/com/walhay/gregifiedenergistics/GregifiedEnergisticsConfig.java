@@ -5,22 +5,11 @@ import net.minecraftforge.common.config.Config;
 @Config(modid = GregifiedEnergisticsMod.MOD_ID)
 public class GregifiedEnergisticsConfig {
 
-	@Config.Name("Client config")
-	public static ClientConfig clientConfig = new ClientConfig();
-
 	@Config.Name("Multiblock parts config")
 	public static MachineConfig machineConfig = new MachineConfig();
 
 	@Config.Name("Gui Config")
 	public static GuiConfig guiConfig = new GuiConfig();
-
-	public static class ClientConfig {
-
-		@Config.Name("Ore Prefix To Expose")
-		@Config.Comment("Ore Prefixes used in substitutions so they will not work if ore prefix is not exposed")
-		@Config.RequiresMcRestart
-		public String[] exposeOrePrefix = new String[] {"circuit"};
-	}
 
 	public static class MachineConfig {
 

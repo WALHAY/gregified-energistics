@@ -108,6 +108,7 @@ repositories {
         name 'CleanroomMC Maven'
         url 'https://maven.cleanroommc.com'
     }
+    mavenCentral()
 }
 
 dependencies {
@@ -147,6 +148,8 @@ dependencies {
     }
 
     compileOnly 'org.jetbrains:annotations:26.0.2'
+
+	implementation fileTree(include: ['*.jar'], dir: 'libs')
 }
 
 apply from: 'gradle/scripts/dependencies.gradle'

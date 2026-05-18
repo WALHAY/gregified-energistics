@@ -4,11 +4,17 @@ import static gregtech.api.GTValues.LuV;
 
 import appeng.api.networking.crafting.ICraftingPatternDetails;
 import appeng.items.misc.ItemEncodedPattern;
+import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.screen.ModularPanel;
+import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.value.sync.SyncHandlers;
+import com.cleanroommc.modularui.widget.Widget;
+import com.cleanroommc.modularui.widgets.SlotGroupWidget;
+import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.walhay.gregifiedenergistics.GregifiedEnergisticsConfig;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
 import com.walhay.gregifiedenergistics.api.patterns.implementations.DataStickPatternHelper;
-import com.walhay.gregifiedenergistics.common.gui.DataStickGridWidget;
-import gregtech.api.gui.widgets.AbstractWidgetGroup;
+import com.walhay.gregifiedenergistics.common.mui.DataStickSlot;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
 import gregtech.api.util.AssemblyLineManager;
@@ -20,7 +26,6 @@ import net.minecraft.client.resources.I18n;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
@@ -50,10 +55,23 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 	}
 
 	@Override
-	protected AbstractWidgetGroup createPatternsGrid() {
-		int slotsPerLine = GregifiedEnergisticsConfig.guiConfig.patternSlotsPerLine;
-		if (slotsPerLine == 0) slotsPerLine = (int) Math.sqrt(patternHandler.getSlots());
-		return new DataStickGridWidget(slotsPerLine, patternHandler);
+	public Widget<?> createPatternList(ModularPanel panel, PanelSyncManager syncHandler) {
+		panel.bindPlayerInventory();
+
+		return Flow.column()
+				.name("pattern list")
+				.left(7)
+				.widthRel(0.9f)
+				.coverChildrenHeight()
+				.child(IKey.lang("gregifiedenergistics.gui.pattern_list").asWidget())
+				.child(SlotGroupWidget.builder()
+						.row("IIII")
+						.row("IIII")
+						.row("IIII")
+						.row("IIII")
+						.key('I', index -> new DataStickSlot().slot(SyncHandlers.itemSlot(patternHandler, index)))
+						.build()
+						.coverChildren());
 	}
 
 	@Override
@@ -90,7 +108,7 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 	}
 
 	@Override
-	public void clearMachineInventory(NonNullList<ItemStack> itemBuffer) {
+	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
 		super.clearMachineInventory(itemBuffer);
 		clearInventory(itemBuffer, patternHandler);
 	}

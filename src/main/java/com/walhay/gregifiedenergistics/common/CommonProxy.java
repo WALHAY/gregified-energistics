@@ -1,9 +1,12 @@
 package com.walhay.gregifiedenergistics.common;
 
 import com.walhay.gregifiedenergistics.GregifiedEnergisticsMod;
+import com.walhay.gregifiedenergistics.Tags;
 import com.walhay.gregifiedenergistics.api.capability.GregifiedEnergisticsCapabilities;
 import com.walhay.gregifiedenergistics.common.metatileentities.GregifiedEnergisticsMetaTileEntities;
 import com.walhay.gregifiedenergistics.loader.recipes.GregifiedEnergisticsRecipes;
+import gregtech.api.GregTechAPI;
+import gregtech.api.metatileentity.registry.MTEManager;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -21,5 +24,10 @@ public class CommonProxy {
 	@SubscribeEvent
 	public static void registerRecipes(RegistryEvent.Register<IRecipe> event) {
 		GregifiedEnergisticsRecipes.load();
+	}
+
+	@SubscribeEvent
+	public static void registerMTERegistry(MTEManager.MTERegistryEvent event) {
+		GregTechAPI.mteManager.createRegistry(Tags.MOD_ID);
 	}
 }
