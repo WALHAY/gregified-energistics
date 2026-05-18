@@ -14,6 +14,7 @@ import appeng.api.storage.channels.IItemStorageChannel;
 import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.fluids.util.AEFluidStack;
+import appeng.helpers.DualityInterface;
 import appeng.items.misc.ItemEncodedPattern;
 import appeng.util.item.AEItemStack;
 import com.cleanroommc.modularui.factory.PosGuiData;
@@ -260,10 +261,12 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			if (pattern == null) {
 				var container = getContainer(oldPattern);
 				if (container != null) {
+					container.refundItems();
+					container.refundFluids();
+
 					container.setPattern(null);
 					patternToContainer.remove(oldPattern, container);
 				}
-				// TODO: refund old pattern container
 				return;
 			}
 
@@ -310,8 +313,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			if (pattern != null && pattern.getCondensedInputs() != null) {
 				for (var stack : pattern.getCondensedInputs()) {
 					if (FakeFluids.isFluidFakeItem(stack.createItemStack())) {
-						tanks.add(new NotifiableFluidTank(
-								Integer.MAX_VALUE, MTEMEPatternBuffer.this.getController(), false));
+						tanks.add(new NotifiableFluidTank(Integer.MAX_VALUE, MTEMEPatternBuffer.this, false));
 					}
 				}
 			}
@@ -433,6 +435,8 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 		@Override
 		public void deserializeNBT(NBTTagCompound nbt) {
+			super.deserializeNBT(nbt);
+
 			if (nbt.hasKey("FluidInventory")) {
 				fluidInventory.deserializeNBT(nbt.getCompoundTag("FluidInventory"));
 			}
