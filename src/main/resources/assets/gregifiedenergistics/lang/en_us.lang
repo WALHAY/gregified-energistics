@@ -29,3 +29,5 @@ gregifiedenergistics.machine.me.paste_settings=Applied settings from Memory Card
 gregifiedenergistics.gui.substitution=Substitutions
 gregifiedenergistics.gui.substitution_list=List of Substitutions
 gregifiedenergistics.gui.pattern_list=Patterns
+
+gregifiedenergistics.gui.buffer_contents=Buffer Contents #%d

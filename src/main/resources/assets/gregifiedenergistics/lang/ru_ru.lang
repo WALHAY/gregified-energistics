@@ -29,3 +29,5 @@ gregifiedenergistics.machine.me.import_paste_settings=Настройки из К
 gregifiedenergistics.gui.substitution=Замены
 gregifiedenergistics.gui.substitution_list=Список Замен
 gregifiedenergistics.gui.pattern_list=Шаблоны
+
+gregifiedenergistics.gui.buffer_contents=Содержимое буфера #%d
