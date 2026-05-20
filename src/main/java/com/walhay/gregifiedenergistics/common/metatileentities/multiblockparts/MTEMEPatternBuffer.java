@@ -101,6 +101,11 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		}
 
 		super.clearMachineInventory(itemBuffer);
+		patternHandler.getContainers().stream().map(PatternContainer::inventory).forEach(handler -> {
+			for(int i = 0; i < handler.getSlots(); ++i) {
+				itemBuffer.add(handler.getStackInSlot(i));
+			}
+		});
 	}
 
 	@Override
