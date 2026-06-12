@@ -84,7 +84,9 @@ public class SegmentItemHandlerListTest {
 
 		int currentSize = changeHandler.getSlots();
 
-		changeHandler.setSize(Math.max(1, currentSize + diff));
+		int newSize = Math.max(0, currentSize + diff);
+		changeHandler.setSize(newSize);
+		if(newSize == 0) handlers.remove(handlerIndex);
 		this.handlerList.onHandlerChange(changeHandler);
 
 		checkContents();
@@ -134,5 +136,12 @@ public class SegmentItemHandlerListTest {
 		performHandlerResize(0, 40);
 		performHandlerResize(0, -17);
 		performHandlerResize(1, -40);
+	}
+
+	@Test
+	public void zeroResizeTest() {
+		performHandlerResize(2, -handlers.get(2).getSlots());
+		performHandlerResize(0, -handlers.get(0).getSlots());
+		performHandlerResize(0, -handlers.get(0).getSlots());
 	}
 }

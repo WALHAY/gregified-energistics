@@ -83,7 +83,7 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 
 	@Override
 	public int getSlots() {
-		return prefix.get(prefix.size() - 1);
+		return prefix.isEmpty() ? 0 : prefix.get(prefix.size() - 1);
 	}
 
 	@Override
