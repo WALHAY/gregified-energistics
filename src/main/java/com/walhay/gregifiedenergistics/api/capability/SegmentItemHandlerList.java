@@ -6,7 +6,6 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.Collection;
 import java.util.LinkedList;
-import java.util.List;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.items.IItemHandlerModifiable;
 
@@ -45,6 +44,8 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 	}
 
 	public void addHandler(IItemHandlerModifiable handler) {
+		if (handlers.contains(handler)) return;
+
 		handlers.add(handler);
 
 		if (prefix.size() > 0) {
@@ -57,8 +58,9 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 	public void onHandlerChange(IItemHandlerModifiable handler) {
 		int index = handlers.indexOf(handler);
 
-		int oldSize = prefix.get(index) - (index == 0 ? 0 : prefix.get(index - 1));
+		if (index == -1) return;
 
+		int oldSize = prefix.get(index) - (index == 0 ? 0 : prefix.get(index - 1));
 		int diff = handler.getSlots() - oldSize;
 
 		for (int i = index; i < prefix.size(); ++i) {
@@ -71,12 +73,10 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 		}
 	}
 
-	public List<IItemHandlerModifiable> getHandlers() {
-		return handlers;
-	}
-
 	protected HandlerEntry getHandlerByGlobalIndex(int index) {
 		int handlerIndex = upperBound(prefix, index);
+
+		if (handlerIndex == -1) return new HandlerEntry(null, 0);
 
 		return new HandlerEntry(handlers.get(handlerIndex), handlerIndex == 0 ? 0 : prefix.get(handlerIndex - 1));
 	}

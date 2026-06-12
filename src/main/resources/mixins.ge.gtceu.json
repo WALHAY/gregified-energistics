@@ -9,6 +9,7 @@
 	"metatileentities.DataAccessHatchMixin",
 	"metatileentities.DataBankMixin",
 	"metatileentities.OpticalDataHatchMixin",
+	"metatileentities.RecipeMapMultiblockControllerMixin",
 	"pipenet.block.BlockOpticalPipeMixin",
 	"pipenet.tile.TileEntityOpticalPipeMixin",
 	"pipenet.net.OpticalNetHandlerMixin",
