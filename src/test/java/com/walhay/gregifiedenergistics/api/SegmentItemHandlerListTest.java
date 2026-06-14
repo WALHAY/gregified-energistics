@@ -86,7 +86,7 @@ public class SegmentItemHandlerListTest {
 
 		int newSize = Math.max(0, currentSize + diff);
 		changeHandler.setSize(newSize);
-		if(newSize == 0) handlers.remove(handlerIndex);
+		if (newSize == 0) handlers.remove(handlerIndex);
 		this.handlerList.onHandlerChange(changeHandler);
 
 		checkContents();

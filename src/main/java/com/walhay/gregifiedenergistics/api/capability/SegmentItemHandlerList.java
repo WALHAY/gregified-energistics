@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Objects;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.items.IItemHandlerModifiable;
 
@@ -22,12 +23,14 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 
 	public SegmentItemHandlerList(IItemHandlerModifiable... handlers) {
 		for (IItemHandlerModifiable handler : handlers) {
+			if (handler == null) continue;
+
 			addHandler(handler);
 		}
 	}
 
 	public SegmentItemHandlerList(Collection<IItemHandlerModifiable> handlers) {
-		handlers.forEach(this::addHandler);
+		handlers.stream().filter(Objects::nonNull).forEach(this::addHandler);
 	}
 
 	private static int upperBound(IntList prefix, int x) {
@@ -47,12 +50,7 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 		if (handlers.contains(handler)) return;
 
 		handlers.add(handler);
-
-		if (prefix.size() > 0) {
-			prefix.add(prefix.get(prefix.size() - 1) + handler.getSlots());
-		} else {
-			prefix.add(handler.getSlots());
-		}
+		prefix.add(handler.getSlots() + (prefix.size() == 0 ? 0 : prefix.get(prefix.size() - 1)));
 	}
 
 	public void onHandlerChange(IItemHandlerModifiable handler) {
@@ -62,6 +60,7 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 
 		int oldSize = prefix.get(index) - (index == 0 ? 0 : prefix.get(index - 1));
 		int diff = handler.getSlots() - oldSize;
+		if (diff == 0) return;
 
 		for (int i = index; i < prefix.size(); ++i) {
 			prefix.set(i, prefix.get(i) + diff);
