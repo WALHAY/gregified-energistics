@@ -3,15 +3,16 @@ package com.walhay.gregifiedenergistics.api.capability;
 import gregtech.api.capability.IMultipleTankHandler;
 import gregtech.api.capability.INotifiableHandler;
 import gregtech.api.capability.impl.GhostCircuitItemStackHandler;
+import gregtech.api.capability.impl.ItemHandlerList;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.util.ItemStackHashStrategy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidTankProperties;
 import net.minecraftforge.items.IItemHandlerModifiable;
-import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 
 /** PatternBufferDualDelegate */
@@ -25,7 +26,7 @@ public class PatternBufferDualDelegate implements IItemHandlerModifiable, IMulti
 	@NotNull private static final ItemStackHashStrategy strategy = ItemStackHashStrategy.comparingAll();
 
 	// May be it will be worth to keep default ItemHandlerList as its backing handlers changes not quite often
-	private SegmentItemHandlerList inventory;
+	private ItemHandlerList inventory;
 
 	public PatternBufferDualDelegate(
 			IItemHandlerModifiable itemDelegate,
@@ -35,7 +36,7 @@ public class PatternBufferDualDelegate implements IItemHandlerModifiable, IMulti
 
 		this.ghostCircuit = ghostCircuit;
 		this.itemDelegate = itemDelegate;
-		this.inventory = new SegmentItemHandlerList(itemDelegate, ghostCircuit);
+		this.inventory = new ItemHandlerList(Arrays.asList(itemDelegate, ghostCircuit));
 		this.fluidDelegate = fluidDelegate;
 	}
 
@@ -61,14 +62,14 @@ public class PatternBufferDualDelegate implements IItemHandlerModifiable, IMulti
 
 	@Override
 	public @NotNull ItemStack insertItem(int slot, @NotNull ItemStack stack, boolean simulate) {
-		var remainder = itemDelegate.insertItem(slot, stack, simulate);
+		var remainder = inventory.insertItem(slot, stack, simulate);
 		if (!simulate && !strategy.equals(remainder, stack)) onContentsChanged();
 		return remainder;
 	}
 
 	@Override
 	public @NotNull ItemStack extractItem(int slot, int amount, boolean simulate) {
-		var extracted = itemDelegate.extractItem(slot, amount, simulate);
+		var extracted = inventory.extractItem(slot, amount, simulate);
 		if (!simulate && !extracted.isEmpty()) onContentsChanged();
 		return extracted;
 	}
@@ -80,7 +81,7 @@ public class PatternBufferDualDelegate implements IItemHandlerModifiable, IMulti
 
 	@Override
 	public void setStackInSlot(int slot, @NotNull ItemStack stack) {
-		var oldStack = itemDelegate.getStackInSlot(slot);
+		var oldStack = inventory.getStackInSlot(slot);
 		itemDelegate.setStackInSlot(slot, stack);
 		if (!strategy.equals(oldStack, stack)) onContentsChanged();
 	}
@@ -135,11 +136,8 @@ public class PatternBufferDualDelegate implements IItemHandlerModifiable, IMulti
 		this.fluidDelegate = fluidDelegate;
 	}
 
-	public void setSize(int slots) {
-		if (itemDelegate instanceof ItemStackHandler handler) {
-			handler.setSize(slots);
-			inventory.onHandlerChange(handler);
-		}
+	public void onResize() {
+		this.inventory = new ItemHandlerList(Arrays.asList(itemDelegate, ghostCircuit));
 	}
 
 	@Override

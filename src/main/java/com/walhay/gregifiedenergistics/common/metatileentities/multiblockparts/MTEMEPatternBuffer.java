@@ -2,13 +2,17 @@ package com.walhay.gregifiedenergistics.common.metatileentities.multiblockparts;
 
 import static gregtech.api.GTValues.ZPM;
 
+import appeng.api.AEApi;
 import appeng.api.config.Actionable;
 import appeng.api.networking.crafting.ICraftingPatternDetails;
 import appeng.api.networking.crafting.ICraftingProviderHelper;
 import appeng.api.networking.storage.IStorageGrid;
 import appeng.api.storage.IMEInventory;
+import appeng.api.storage.channels.IFluidStorageChannel;
 import appeng.api.storage.channels.IItemStorageChannel;
+import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IAEItemStack;
+import appeng.fluids.util.AEFluidStack;
 import appeng.items.misc.ItemEncodedPattern;
 import appeng.util.item.AEItemStack;
 import com.cleanroommc.modularui.api.IPanelHandler;
@@ -24,28 +28,31 @@ import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.glodblock.github.common.item.fake.FakeFluids;
 import com.glodblock.github.common.item.fake.FakeItemRegister;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
+import com.walhay.gregifiedenergistics.api.capability.PatternBufferDualDelegate;
 import com.walhay.gregifiedenergistics.api.capability.SegmentItemHandlerList;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
 import com.walhay.gregifiedenergistics.api.util.FluidCraftingUtils;
 import gregtech.api.capability.IMultipleTankHandler;
-import gregtech.api.capability.INotifiableHandler;
 import gregtech.api.capability.impl.FluidTankList;
-import gregtech.api.capability.impl.NotifiableItemStackHandler;
+import gregtech.api.capability.impl.GhostCircuitItemStackHandler;
+import gregtech.api.capability.impl.ItemHandlerList;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
 import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
-import gregtech.api.metatileentity.multiblock.MultiblockControllerBase;
 import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.mui.GTGuis.PopupPanel;
+import gregtech.api.mui.widget.GhostCircuitSlotWidget;
 import gregtech.api.util.GTTransferUtils;
 import gregtech.common.mui.widget.GTFluidSlot;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 import net.minecraft.block.Block;
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
@@ -55,7 +62,9 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.INBTSerializable;
 import net.minecraftforge.fluids.FluidStack;
+import net.minecraftforge.fluids.FluidTank;
 import net.minecraftforge.items.IItemHandlerModifiable;
+import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.input.Keyboard;
@@ -73,10 +82,17 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	}
 
 	@Override
+	public IItemHandlerModifiable getImportItems() {
+		return new ItemHandlerList(patternHandler.getContainers().stream()
+				.map(PatternContainer::dualInventory)
+				.collect(Collectors.toList()));
+	}
+
+	@Override
 	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
 		for (var container : patternHandler) {
 			container.refundItems(false);
-			// container.refundFluids();
+			container.refundFluids();
 		}
 
 		super.clearMachineInventory(itemBuffer);
@@ -112,12 +128,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 	@Override
 	public boolean isBusy() {
-		if (getController() == null) return true;
-
-		if (getController() instanceof RecipeMapMultiblockController controller && !controller.isWorkingEnabled())
-			return true;
-
-		return false;
+		return getController() instanceof RecipeMapMultiblockController controller && !controller.isWorkingEnabled();
 	}
 
 	@Override
@@ -127,6 +138,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		var container = patternHandler.getContainer(pattern);
 		if (container == null) return false;
 
+		List<ItemStack> stacks = new ArrayList<>();
 		for (int i = 0; i < inventory.getSizeInventory(); ++i) {
 			var stack = inventory.getStackInSlot(i);
 
@@ -135,6 +147,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			if (FakeFluids.isFluidFakeItem(stack)) {
 				FluidStack fluidStack = FakeItemRegister.getStack(stack);
 				if (fluidStack == null) continue;
+
 				container.insertFluid(fluidStack);
 				continue;
 			}
@@ -143,18 +156,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		}
 
 		return true;
-	}
-
-	@Override
-	public void addToMultiBlock(MultiblockControllerBase controller) {
-		super.addToMultiBlock(controller);
-		patternHandler.addNotifiableMetaTileEntity(controller);
-	}
-
-	@Override
-	public void removeFromMultiBlock(MultiblockControllerBase controller) {
-		super.removeFromMultiBlock(controller);
-		patternHandler.removeNotifiableMetaTileEntity(controller);
 	}
 
 	@Override
@@ -234,8 +235,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	}
 
 	/** PatternBuffer */
-	private class PatternHandler extends AbstractPatternItemHandler
-			implements INotifiableHandler, Iterable<PatternContainer> {
+	private class PatternHandler extends AbstractPatternItemHandler implements Iterable<PatternContainer> {
 
 		private final PatternContainer[] containers;
 		private final Object2ObjectOpenHashMap<ICraftingPatternDetails, PatternContainer> patternToContainer;
@@ -280,7 +280,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			}
 
 			container.refundItems(true);
-			// container.refundFluids();
+			container.refundFluids();
 
 			container.setPattern(null);
 		}
@@ -355,20 +355,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				containers[slot].deserializeNBT(entry.getCompoundTag("Data"));
 			}
 		}
-
-		@Override
-		public void addNotifiableMetaTileEntity(MetaTileEntity mte) {
-			for (var container : containers) {
-				container.addNotifiableMetaTileEntity(mte);
-			}
-		}
-
-		@Override
-		public void removeNotifiableMetaTileEntity(MetaTileEntity mte) {
-			for (var container : containers) {
-				container.removeNotifiableMetaTileEntity(mte);
-			}
-		}
 	}
 
 	/**
@@ -378,38 +364,51 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	 *
 	 * <p>Implements {@link INBTSerializable} for serializing container content.
 	 */
-	private class PatternContainer implements INotifiableHandler, INBTSerializable<NBTTagCompound> {
+	private class PatternContainer implements INBTSerializable<NBTTagCompound> {
 
 		private ICraftingPatternDetails pattern;
 
-		private NotifiableItemStackHandler itemInventory;
+		private ItemStackHandler itemInventory;
+		private GhostCircuitItemStackHandler circuitInventory;
+		private PatternBufferDualDelegate dualHandler;
 		private FluidTankList fluidInventory;
 
 		public PatternContainer() {
-			this.itemInventory = new NotifiableItemStackHandler(
-					MTEMEPatternBuffer.this, 16, MTEMEPatternBuffer.this.getController(), false);
+			this.itemInventory = new ItemStackHandler(0);
+			this.circuitInventory = new GhostCircuitItemStackHandler(MTEMEPatternBuffer.this);
 
 			this.fluidInventory = new FluidTankList(false);
+
+			this.dualHandler = new PatternBufferDualDelegate(itemInventory, circuitInventory, fluidInventory);
+			this.dualHandler.addNotifiableMetaTileEntity(MTEMEPatternBuffer.this);
 		}
 
 		public void setPattern(ICraftingPatternDetails pattern) {
 			this.pattern = pattern;
 
 			int fluids = 0;
-			int inputs = 0;
+			int items = 0;
 			if (pattern != null && pattern.getCondensedInputs() != null) {
 				fluids = FluidCraftingUtils.getFluids(pattern.getCondensedInputs())
 						.size();
-				inputs = pattern.getCondensedInputs().length;
+				items = pattern.getCondensedInputs().length - fluids;
 			}
-
-			this.itemInventory.setSize(inputs);
+			this.itemInventory.setSize(items);
+			this.dualHandler.onResize();
 
 			if (getController() instanceof RecipeMapMultiblockController controller) {
 				if (controller.getInputInventory() instanceof SegmentItemHandlerList seg) {
-					seg.onHandlerChange(itemInventory);
+					seg.onHandlerChange(dualHandler);
 				}
 			}
+
+			List<FluidTank> fluidTanks = new ArrayList<>(fluids);
+			for (int i = 0; i < fluids; ++i) {
+				fluidTanks.add(new FluidTank(Integer.MAX_VALUE));
+			}
+
+			this.fluidInventory = new FluidTankList(false, fluidTanks);
+			this.dualHandler.setFluidDelegate(fluidInventory);
 		}
 
 		@Nullable public ICraftingPatternDetails getPattern() {
@@ -421,14 +420,13 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		}
 
 		public IItemHandlerModifiable dualInventory() {
-			return itemInventory;
+			return dualHandler;
 		}
 
 		public void insertItem(ItemStack stack) {
-			var result = GTTransferUtils.insertItem(itemInventory, stack, true);
-			if (!result.isEmpty()) return;
+			if (stack == null || stack.isEmpty()) return;
 
-			GTTransferUtils.insertItem(itemInventory, stack, false);
+			GTTransferUtils.insertItem(dualHandler, stack, false);
 		}
 
 		public void insertFluid(FluidStack stack) {
@@ -474,49 +472,38 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			}
 		}
 
-		// public void refundFluids() {
-		// 	var node = getProxy().getNode();
-		// 	if (node == null) return;
-		//
-		// 	var grid = node.getGrid();
-		// 	if (grid == null) return;
-		//
-		// 	IFluidStorageChannel fluidChannel =
-		// 			AEApi.instance().storage().getStorageChannel(IFluidStorageChannel.class);
-		//
-		// 	IStorageGrid storage = grid.getCache(IStorageGrid.class);
-		// 	if (storage == null) return;
-		//
-		// 	IMEInventory<IAEFluidStack> meInventory = storage.getInventory(fluidChannel);
-		// 	if (meInventory == null) return;
-		//
-		// 	for (var tank : fluidInventory.getFluidTanks()) {
-		// 		var fluid = tank.getFluid();
-		//
-		// 		if (fluid == null || fluid.amount <= 0) continue;
-		//
-		// 		IAEFluidStack aeFluid = AEFluidStack.fromFluidStack(fluid);
-		//
-		// 		IAEFluidStack remainder = meInventory.injectItems(aeFluid, Actionable.MODULATE, getActionSource());
-		// 		int toDrain = fluid.amount;
-		// 		if (remainder != null && remainder.getStackSize() > 0) {
-		// 			toDrain = fluid.amount - (int) remainder.getStackSize();
-		// 		}
-		// 		if (toDrain <= 0) continue;
-		//
-		// 		tank.drain(toDrain, true);
-		// 	}
-		// }
+		public void refundFluids() {
+			var node = getProxy().getNode();
+			if (node == null) return;
 
-		@Override
-		public void addNotifiableMetaTileEntity(MetaTileEntity mte) {
-			itemInventory.addNotifiableMetaTileEntity(mte);
-			itemInventory.addToNotifiedList(MTEMEPatternBuffer.this, itemInventory, false);
-		}
+			var grid = node.getGrid();
+			if (grid == null) return;
 
-		@Override
-		public void removeNotifiableMetaTileEntity(MetaTileEntity mte) {
-			itemInventory.removeNotifiableMetaTileEntity(mte);
+			IFluidStorageChannel fluidChannel =
+					AEApi.instance().storage().getStorageChannel(IFluidStorageChannel.class);
+
+			IStorageGrid storage = grid.getCache(IStorageGrid.class);
+			if (storage == null) return;
+
+			IMEInventory<IAEFluidStack> meInventory = storage.getInventory(fluidChannel);
+			if (meInventory == null) return;
+
+			for (var tank : fluidInventory.getFluidTanks()) {
+				var fluid = tank.getFluid();
+
+				if (fluid == null || fluid.amount <= 0) continue;
+
+				IAEFluidStack aeFluid = AEFluidStack.fromFluidStack(fluid);
+
+				IAEFluidStack remainder = meInventory.injectItems(aeFluid, Actionable.MODULATE, getActionSource());
+				int toDrain = fluid.amount;
+				if (remainder != null && remainder.getStackSize() > 0) {
+					toDrain = fluid.amount - (int) remainder.getStackSize();
+				}
+				if (toDrain <= 0) continue;
+
+				tank.drain(toDrain, true);
+			}
 		}
 
 		@Override
@@ -575,8 +562,8 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 									.mapTo(
 											tanksPerRow,
 											fluidInventory.getFluidTanks(),
-											(index, tank) -> new GTFluidSlot().syncHandler(tank))));
-			// .child(new GhostCircuitSlotWidget().slot(ghostCircuit, 0)));
+											(index, tank) -> new GTFluidSlot().syncHandler(tank)))
+							.child(new GhostCircuitSlotWidget().slot(circuitInventory, 0)));
 		}
 	}
 }
