@@ -28,7 +28,8 @@ import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.glodblock.github.common.item.fake.FakeFluids;
 import com.glodblock.github.common.item.fake.FakeItemRegister;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
-import com.walhay.gregifiedenergistics.api.capability.PatternBufferDualDelegate;
+import com.walhay.gregifiedenergistics.api.capability.InfiniteItemStackHandler;
+import com.walhay.gregifiedenergistics.api.capability.PatternBufferDualHandler;
 import com.walhay.gregifiedenergistics.api.capability.SegmentItemHandlerList;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
 import com.walhay.gregifiedenergistics.api.util.FluidCraftingUtils;
@@ -83,21 +84,25 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	@Override
 	public IItemHandlerModifiable getImportItems() {
 		return new ItemHandlerList(patternHandler.getContainers().stream()
-				.map(PatternContainer::dualInventory)
+				.map(PatternContainer::inventory)
 				.collect(Collectors.toList()));
 	}
 
 	@Override
 	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
+		super.clearMachineInventory(itemBuffer);
+		// clearInventory(itemBuffer, patternHandler);
+		// for (var container : patternHandler) {
+		// 	clearInventory(itemBuffer, container.inventory());
+		// }
+	}
+
+	@Override
+	public void onRemoval() {
+		super.onRemoval();
 		for (var container : patternHandler) {
 			container.refundItems(false);
 			container.refundFluids();
-		}
-
-		super.clearMachineInventory(itemBuffer);
-		clearInventory(itemBuffer, patternHandler);
-		for (var container : patternHandler) {
-			clearInventory(itemBuffer, container.inventory());
 		}
 	}
 
@@ -127,7 +132,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 	@Override
 	public boolean isBusy() {
-		return getController() instanceof RecipeMapMultiblockController controller && !controller.isWorkingEnabled();
+		return false;
 	}
 
 	@Override
@@ -207,9 +212,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 	@Override
 	public void registerAbilities(@NotNull AbilityInstances ability) {
-		patternHandler.getContainers().stream()
-				.map(PatternContainer::dualInventory)
-				.forEach(ability::add);
+		patternHandler.getContainers().stream().map(PatternContainer::inventory).forEach(ability::add);
 	}
 
 	@Override
@@ -369,21 +372,12 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 		private ItemStackHandler itemInventory;
 		private GhostCircuitItemStackHandler circuitInventory;
-		private PatternBufferDualDelegate dualHandler;
-		private FluidTankList fluidInventory;
+		private PatternBufferDualHandler dualHandler;
+		private IMultipleTankHandler fluidInventory;
 
 		public PatternContainer() {
-			this.itemInventory = new ItemStackHandler(0) {
-				@Override
-				protected int getStackLimit(int slot, ItemStack stack) {
-					return Integer.MAX_VALUE;
-				}
+			this.itemInventory = new InfiniteItemStackHandler(0);
 
-				@Override
-				public int getSlotLimit(int slot) {
-					return Integer.MAX_VALUE;
-				}
-			};
 			this.circuitInventory = new GhostCircuitItemStackHandler(MTEMEPatternBuffer.this) {
 				@Override
 				public void setCircuitValue(int config) {
@@ -395,8 +389,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 			this.fluidInventory = new FluidTankList(false);
 
-			this.dualHandler = new PatternBufferDualDelegate(itemInventory, circuitInventory, fluidInventory);
-			this.dualHandler.addNotifiableMetaTileEntity(MTEMEPatternBuffer.this);
+			this.dualHandler = new PatternBufferDualHandler(itemInventory, circuitInventory, fluidInventory);
 		}
 
 		public void setPattern(ICraftingPatternDetails pattern) {
@@ -431,11 +424,11 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			return pattern;
 		}
 
-		public IItemHandlerModifiable inventory() {
-			return itemInventory;
+		public IMultipleTankHandler fluidInventory() {
+			return fluidInventory;
 		}
 
-		public IItemHandlerModifiable dualInventory() {
+		public IItemHandlerModifiable inventory() {
 			return dualHandler;
 		}
 
@@ -443,7 +436,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			if (stack == null || stack.isEmpty()) return;
 
 			dualHandler.insertItem(slot, stack, false);
-			// GTTransferUtils.insertItem(dualHandler, stack, false);
 		}
 
 		public void insertFluid(FluidStack stack) {
@@ -571,7 +563,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 									.minColWidth(18)
 									.minRowHeight(18)
 									.coverChildren()
-									.mapTo(slotsPerRow, slots, index -> new ItemSlot().slot(itemInventory, index)))
+									.mapTo(slotsPerRow, slots, index -> new ItemSlot().slot(dualHandler, index)))
 							.child(new Grid()
 									.minColWidth(18)
 									.minRowHeight(18)
