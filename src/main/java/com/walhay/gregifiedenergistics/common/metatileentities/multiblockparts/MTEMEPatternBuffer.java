@@ -84,17 +84,17 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	@Override
 	public IItemHandlerModifiable getImportItems() {
 		return new ItemHandlerList(patternHandler.getContainers().stream()
-				.map(PatternContainer::inventory)
+				.map(PatternContainer::dualInventory)
 				.collect(Collectors.toList()));
 	}
 
 	@Override
 	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
 		super.clearMachineInventory(itemBuffer);
-		// clearInventory(itemBuffer, patternHandler);
-		// for (var container : patternHandler) {
-		// 	clearInventory(itemBuffer, container.inventory());
-		// }
+		clearInventory(itemBuffer, patternHandler);
+		for (var container : patternHandler) {
+			clearInventory(itemBuffer, container.inventory());
+		}
 	}
 
 	@Override
@@ -212,7 +212,9 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 	@Override
 	public void registerAbilities(@NotNull AbilityInstances ability) {
-		patternHandler.getContainers().stream().map(PatternContainer::inventory).forEach(ability::add);
+		patternHandler.getContainers().stream()
+				.map(PatternContainer::dualInventory)
+				.forEach(ability::add);
 	}
 
 	@Override
@@ -429,6 +431,10 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		}
 
 		public IItemHandlerModifiable inventory() {
+			return itemInventory;
+		}
+
+		public IItemHandlerModifiable dualInventory() {
 			return dualHandler;
 		}
 
