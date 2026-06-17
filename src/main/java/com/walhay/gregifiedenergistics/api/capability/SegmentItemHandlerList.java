@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Objects;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 
 /**
@@ -18,18 +19,18 @@ import net.minecraftforge.items.IItemHandlerModifiable;
  */
 public class SegmentItemHandlerList implements IItemHandlerModifiable {
 
-	private final LinkedList<IItemHandlerModifiable> handlers = new LinkedList<>();
+	private final LinkedList<IItemHandler> handlers = new LinkedList<>();
 	private final IntList prefix = new IntArrayList();
 
-	public SegmentItemHandlerList(IItemHandlerModifiable... handlers) {
-		for (IItemHandlerModifiable handler : handlers) {
+	public SegmentItemHandlerList(IItemHandler... handlers) {
+		for (IItemHandler handler : handlers) {
 			if (handler == null) continue;
 
 			addHandler(handler);
 		}
 	}
 
-	public SegmentItemHandlerList(Collection<IItemHandlerModifiable> handlers) {
+	public SegmentItemHandlerList(Collection<IItemHandler> handlers) {
 		handlers.stream().filter(Objects::nonNull).forEach(this::addHandler);
 	}
 
@@ -46,7 +47,7 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 		return lo;
 	}
 
-	public void addHandler(IItemHandlerModifiable handler) {
+	public void addHandler(IItemHandler handler) {
 		if (handlers.contains(handler)) return;
 
 		handlers.add(handler);
@@ -119,11 +120,14 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 	public void setStackInSlot(int slot, ItemStack stack) {
 		HandlerEntry entry = getHandlerByGlobalIndex(slot);
 
-		if (entry.handler != null) {
-			entry.handler.setStackInSlot(slot - entry.index, stack);
+		if (entry.handler != null && entry.handler instanceof IItemHandlerModifiable modifiable) {
+			modifiable.setStackInSlot(slot - entry.index, stack);
+		} else {
+			entry.handler.extractItem(slot, Integer.MAX_VALUE, false);
+			entry.handler.insertItem(slot, stack, false);
 		}
 	}
 
 	@Desugar
-	public record HandlerEntry(IItemHandlerModifiable handler, int index) {}
+	public record HandlerEntry(IItemHandler handler, int index) {}
 }
