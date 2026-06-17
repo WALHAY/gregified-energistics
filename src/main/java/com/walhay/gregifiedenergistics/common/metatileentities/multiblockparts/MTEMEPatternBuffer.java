@@ -45,7 +45,6 @@ import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.mui.GTGuis.PopupPanel;
 import gregtech.api.mui.widget.GhostCircuitSlotWidget;
-import gregtech.api.util.GTTransferUtils;
 import gregtech.common.mui.widget.GTFluidSlot;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.ArrayList;
@@ -138,7 +137,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		var container = patternHandler.getContainer(pattern);
 		if (container == null) return false;
 
-		List<ItemStack> stacks = new ArrayList<>();
+		int slot = 0;
 		for (int i = 0; i < inventory.getSizeInventory(); ++i) {
 			var stack = inventory.getStackInSlot(i);
 
@@ -152,7 +151,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				continue;
 			}
 
-			container.insertItem(stack);
+			container.insertItem(stack, slot++);
 		}
 
 		return true;
@@ -374,8 +373,25 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		private FluidTankList fluidInventory;
 
 		public PatternContainer() {
-			this.itemInventory = new ItemStackHandler(0);
-			this.circuitInventory = new GhostCircuitItemStackHandler(MTEMEPatternBuffer.this);
+			this.itemInventory = new ItemStackHandler(0) {
+				@Override
+				protected int getStackLimit(int slot, ItemStack stack) {
+					return Integer.MAX_VALUE;
+				}
+
+				@Override
+				public int getSlotLimit(int slot) {
+					return Integer.MAX_VALUE;
+				}
+			};
+			this.circuitInventory = new GhostCircuitItemStackHandler(MTEMEPatternBuffer.this) {
+				@Override
+				public void setCircuitValue(int config) {
+					super.setCircuitValue(config);
+
+					PatternContainer.this.dualHandler.onContentsChanged();
+				}
+			};
 
 			this.fluidInventory = new FluidTankList(false);
 
@@ -423,10 +439,11 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			return dualHandler;
 		}
 
-		public void insertItem(ItemStack stack) {
+		public void insertItem(ItemStack stack, int slot) {
 			if (stack == null || stack.isEmpty()) return;
 
-			GTTransferUtils.insertItem(dualHandler, stack, false);
+			dualHandler.insertItem(slot, stack, false);
+			// GTTransferUtils.insertItem(dualHandler, stack, false);
 		}
 
 		public void insertFluid(FluidStack stack) {
