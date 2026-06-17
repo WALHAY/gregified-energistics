@@ -373,7 +373,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		private ItemStackHandler itemInventory;
 		private GhostCircuitItemStackHandler circuitInventory;
 		private PatternBufferDualHandler dualHandler;
-		private IMultipleTankHandler fluidInventory;
+		private FluidTankList fluidInventory;
 
 		public PatternContainer() {
 			this.itemInventory = new InfiniteItemStackHandler(0);
@@ -518,27 +518,28 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		@Override
 		public NBTTagCompound serializeNBT() {
 			var data = new NBTTagCompound();
-			// data.setTag("Items", itemInventory.serializeNBT());
-			// data.setTag("Fluids", fluidInventory.serializeNBT());
-			// var ghostData = new NBTTagCompound();
-			// ghostCircuit.write(ghostData);
-			// data.setTag("GhostCircuit", ghostData);
+			data.setTag("Items", itemInventory.serializeNBT());
+			data.setTag("Fluids", fluidInventory.serializeNBT());
+			var ghostData = new NBTTagCompound();
+			circuitInventory.write(ghostData);
+			data.setTag("CircuitInventory", ghostData);
 			return data;
 		}
 
 		@Override
 		public void deserializeNBT(NBTTagCompound data) {
-			// if (data.hasKey("Items", Constants.NBT.TAG_COMPOUND)) {
-			// 	var inventory = data.getCompoundTag("Items");
-			// 	dualHandler.setSize(inventory.getInteger("Size"));
-			// 	itemInventory.deserializeNBT(inventory);
-			// }
-			// if (data.hasKey("Fluids", Constants.NBT.TAG_COMPOUND)) {
-			// 	fluidInventory.deserializeNBT(data.getCompoundTag("Fluids"));
-			// }
-			// if (data.hasKey("GhostCircuit", Constants.NBT.TAG_COMPOUND)) {
-			// 	ghostCircuit.read(data.getCompoundTag("GhostCircuit"));
-			// }
+			if (data.hasKey("Items", Constants.NBT.TAG_COMPOUND)) {
+				var inventory = data.getCompoundTag("Items");
+				itemInventory.setSize(inventory.getInteger("Size"));
+				dualHandler.onResize();
+				itemInventory.deserializeNBT(inventory);
+			}
+			if (data.hasKey("Fluids", Constants.NBT.TAG_COMPOUND)) {
+				fluidInventory.deserializeNBT(data.getCompoundTag("Fluids"));
+			}
+			if (data.hasKey("CircuitInventory", Constants.NBT.TAG_COMPOUND)) {
+				circuitInventory.read(data.getCompoundTag("CircuitInventory"));
+			}
 		}
 
 		public PopupPanel buildUI(PanelSyncManager syncManager, int slot) {
