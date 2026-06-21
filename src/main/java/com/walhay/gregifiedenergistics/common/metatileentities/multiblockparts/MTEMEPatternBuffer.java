@@ -46,6 +46,7 @@ import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.mui.GTGuis.PopupPanel;
 import gregtech.api.mui.widget.GhostCircuitSlotWidget;
+import gregtech.api.util.GTTransferUtils;
 import gregtech.common.mui.widget.GTFluidSlot;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.ArrayList;
@@ -142,7 +143,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		var container = patternHandler.getContainer(pattern);
 		if (container == null) return false;
 
-		int slot = 0;
 		for (int i = 0; i < inventory.getSizeInventory(); ++i) {
 			var stack = inventory.getStackInSlot(i);
 
@@ -156,7 +156,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				continue;
 			}
 
-			container.insertItem(stack, slot++);
+			container.insertItem(stack);
 		}
 
 		return true;
@@ -438,10 +438,10 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			return dualHandler;
 		}
 
-		public void insertItem(ItemStack stack, int slot) {
+		public void insertItem(ItemStack stack) {
 			if (stack == null || stack.isEmpty()) return;
 
-			dualHandler.insertItem(slot, stack, false);
+			GTTransferUtils.insertItem(dualHandler, stack, false);
 		}
 
 		public void insertFluid(FluidStack stack) {
