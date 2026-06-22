@@ -3,6 +3,7 @@ package com.walhay.gregifiedenergistics.api.mui;
 import com.cleanroommc.modularui.drawable.ColorType;
 import com.cleanroommc.modularui.drawable.UITexture;
 import com.walhay.gregifiedenergistics.Tags;
+import net.minecraft.util.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 
 public class GregifiedEnergisticsGuiTextures {
@@ -12,6 +13,9 @@ public class GregifiedEnergisticsGuiTextures {
 	 * 3 = CRAFTING BLOCKING MODE
 	 */
 	public static final UITexture[] BLOCKING_MODE = slice("textures/gui/blocking_mode.png", 16, 48, 16, 16);
+
+	public static final UITexture PATTERN_OVERLAY =
+			UITexture.fullImage(new ResourceLocation(Tags.MOD_ID, "textures/gui/pattern_overlay.png"));
 
 	@SuppressWarnings("SameParameterValue")
 	private static UITexture[] slice(String path, int imageWidth, int imageHeight, int sliceWidth, int sliceHeight) {

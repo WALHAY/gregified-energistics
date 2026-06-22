@@ -160,7 +160,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 				.coverChildrenHeight()
 				.topRel(0f, 3, 1f);
 
-		var paged = new PagedWidget<>();
+		var paged = new PagedWidget<>().horizontalCenter();
 
 		int pageCounter = 0;
 

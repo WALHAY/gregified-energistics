@@ -7,6 +7,7 @@ import appeng.api.storage.data.IAEItemStack;
 import appeng.items.misc.ItemEncodedPattern;
 import codechicken.lib.raytracer.CuboidRayTraceResult;
 import com.cleanroommc.modularui.api.drawable.IKey;
+import com.cleanroommc.modularui.drawable.Icon;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
@@ -20,6 +21,7 @@ import com.cleanroommc.modularui.widgets.layout.Grid;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
+import com.walhay.gregifiedenergistics.api.mui.GregifiedEnergisticsGuiTextures;
 import gregtech.api.GTValues;
 import gregtech.api.capability.GregtechDataCodes;
 import gregtech.api.capability.IGhostSlotConfigurable;
@@ -65,8 +67,8 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	private GhostCircuitItemStackHandler circuitInventory;
 	private final SinglePatternHandler patternInventory;
 	private ItemHandlerList actualImportItems;
-	private boolean workingEnabled;
-	private boolean autoCollapse;
+	private boolean workingEnabled = true;
+	private boolean autoCollapse = false;
 
 	public MTEMEPatternProvider(ResourceLocation metaTileEntityId, int tier) {
 		super(metaTileEntityId, tier, false, IItemStorageChannel.class);
@@ -79,8 +81,8 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 		var world = getWorld();
 		if (world != null && !world.isRemote) {
 			writeCustomData(GregtechDataCodes.WORKING_ENABLED, buf -> buf.writeBoolean(workingEnabled));
-			notifyPatternChange();
 		}
+		notifyPatternChange();
 	}
 
 	@Override
@@ -95,10 +97,6 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 			return;
 		}
 
-		if (isWorkingEnabled()) {
-			pullItemsFromNearbyHandlers(getFrontFacing());
-		}
-
 		if (isAutoCollapse()) {
 			if (!isAttachedToMultiBlock() || this.getNotifiedItemInputList().contains(importItems)) {
 				collapseInventorySlotContents(importItems);
@@ -107,7 +105,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	}
 
 	@Override
-	public MetaTileEntity createMetaTileEntity(IGregTechTileEntity handler) {
+	public MetaTileEntity createMetaTileEntity(IGregTechTileEntity holder) {
 		return new MTEMEPatternProvider(metaTileEntityId, getTier());
 	}
 
@@ -129,9 +127,12 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 
 	@Override
 	public boolean pushPattern(ICraftingPatternDetails pattern, InventoryCrafting inventory) {
-		List<ItemStack> items = new ArrayList<>(inventory.getSizeInventory());
+		if (!isWorkingEnabled() || !patternInventory.getPatterns().contains(pattern)) return false;
 
-		for (int i = 0; i < inventory.getSizeInventory(); ++i) {
+		int size = inventory.getSizeInventory();
+		List<ItemStack> items = new ArrayList<>(size);
+
+		for (int i = 0; i < size; ++i) {
 			items.add(inventory.getStackInSlot(i));
 		}
 
@@ -194,6 +195,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 		super.writeInitialSyncData(buf);
 		buf.writeBoolean(workingEnabled);
 		buf.writeBoolean(autoCollapse);
+		buf.writeCompoundTag(patternInventory.serializeNBT());
 	}
 
 	@Override
@@ -206,8 +208,9 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	@Override
 	public NBTTagCompound writeToNBT(NBTTagCompound data) {
 		super.writeToNBT(data);
-		data.setBoolean("workingEnabled", workingEnabled);
-		data.setBoolean("autoCollapse", autoCollapse);
+		data.setBoolean("WorkingEnabled", workingEnabled);
+		data.setBoolean("AutoCollapse", autoCollapse);
+		data.setTag("PatternInventory", this.patternInventory.serializeNBT());
 		this.circuitInventory.write(data);
 		return data;
 	}
@@ -215,13 +218,18 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	@Override
 	public void readFromNBT(NBTTagCompound data) {
 		super.readFromNBT(data);
-		if (data.hasKey("workingEnabled")) {
-			this.workingEnabled = data.getBoolean("workingEnabled");
+		if (data.hasKey("WorkingEnabled")) {
+			this.workingEnabled = data.getBoolean("WorkingEnabled");
 		}
-		if (data.hasKey("autoCollapse")) {
-			this.autoCollapse = data.getBoolean("autoCollapse");
+		if (data.hasKey("AutoCollapse")) {
+			this.autoCollapse = data.getBoolean("AutoCollapse");
 		}
-		this.circuitInventory.read(data);
+		if (data.hasKey("PatternInventory")) {
+			this.patternInventory.deserializeNBT(data.getCompoundTag("PatternInventory"));
+		}
+		if (this.circuitInventory != null) {
+			this.circuitInventory.read(data);
+		}
 	}
 
 	@Override
@@ -249,6 +257,8 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 				rowSize * 18 + 14); // Bus Inv width
 		int backgroundHeight = 18 + 18 * rowSize + 94;
 
+		Icon detail = GTGuiTextures.BUTTON_POWER_DETAIL.asIcon().size(18, 6).marginTop(24);
+
 		BooleanSyncValue workingStateValue = new BooleanSyncValue(() -> workingEnabled, val -> workingEnabled = val);
 		BooleanSyncValue collapseStateValue = new BooleanSyncValue(() -> autoCollapse, val -> autoCollapse = val);
 
@@ -270,29 +280,20 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 													&& importItems instanceof GTItemStackHandler gtHandler) {
 												gtHandler.onContentsChanged(index);
 											}
-										})
-										.accessibility(!isExportHatch, true))))
+										}))))
 				.child(Flow.column()
 						.pos(backgroundWidth - 7 - 18, backgroundHeight - 18 * 4 - 7 - 5)
 						.width(18)
-						.height(18 * 5 + 5)
-						.child(GTGuiTextures.getLogo(getUITheme())
-								.asWidget()
-								.size(17)
-								.top(18 * 3 + 5))
+						.height(18 * 4 + 5)
 						.child(new ToggleButton()
-								.top(18 * 3)
+								.name("power_button")
+								.size(18)
+								.disableHoverBackground()
+								.overlay(true, detail, GTGuiTextures.BUTTON_POWER[1])
+								.overlay(false, detail, GTGuiTextures.BUTTON_POWER[0])
 								.value(workingStateValue)
-								.overlay(GTGuiTextures.BUTTON_ITEM_OUTPUT)
-								.tooltipAutoUpdate(true)
-								.tooltipBuilder(t -> t.addLine(
-										isExportHatch
-												? (workingStateValue.getBoolValue()
-														? IKey.lang("gregtech.gui.item_auto_output.tooltip.enabled")
-														: IKey.lang("gregtech.gui.item_auto_output.tooltip.disabled"))
-												: (workingStateValue.getBoolValue()
-														? IKey.lang("gregtech.gui.item_auto_input.tooltip.enabled")
-														: IKey.lang("gregtech.gui.item_auto_input.tooltip.disabled")))))
+								.marginTop(4)
+								.top(18 * 3 + 5))
 						.child(new ToggleButton()
 								.top(18 * 2)
 								.value(collapseStateValue)
@@ -304,8 +305,16 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 												: IKey.lang("gregtech.gui.item_auto_collapse.tooltip.disabled"))))
 						.child(new GhostCircuitSlotWidget()
 								.slot(circuitInventory, 0)
+								.top(18)
 								.background(GTGuiTextures.SLOT, GTGuiTextures.INT_CIRCUIT_OVERLAY))
-						.child(new ItemSlot().slot(patternInventory, 0).top(18).background(GTGuiTextures.SLOT)));
+						.child(new ItemSlot()
+								.slot(patternInventory, 0)
+								.horizontalCenter()
+								.background(
+										GTGuiTextures.SLOT,
+										GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY
+												.asIcon()
+												.size(16))));
 	}
 
 	/** Exact copy of {@link MetaTileEntityItemBus#collapseInventorySlotContents(IItemHandlerModifiable)} */

@@ -7,16 +7,17 @@ import appeng.items.misc.ItemEncodedPattern;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.value.sync.SyncHandlers;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
+import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.walhay.gregifiedenergistics.GregifiedEnergisticsConfig;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
+import com.walhay.gregifiedenergistics.api.mui.GregifiedEnergisticsGuiTextures;
 import com.walhay.gregifiedenergistics.api.patterns.implementations.DataStickPatternHelper;
-import com.walhay.gregifiedenergistics.common.mui.DataStickSlot;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
+import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.util.AssemblyLineManager;
 import java.io.IOException;
 import java.util.Collection;
@@ -60,8 +61,8 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 
 		return Flow.column()
 				.name("pattern list")
-				.left(7)
 				.widthRel(0.9f)
+				.horizontalCenter()
 				.coverChildrenHeight()
 				.child(IKey.lang("gregifiedenergistics.gui.pattern_list").asWidget())
 				.child(SlotGroupWidget.builder()
@@ -69,9 +70,16 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 						.row("IIII")
 						.row("IIII")
 						.row("IIII")
-						.key('I', index -> new DataStickSlot().slot(SyncHandlers.itemSlot(patternHandler, index)))
+						.key('I', index -> new ItemSlot()
+								.slot(patternHandler, index)
+								.background(
+										GTGuiTextures.SLOT,
+										GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY
+												.asIcon()
+												.size(16)))
 						.build()
-						.coverChildren());
+						.coverChildren()
+						.horizontalCenter());
 	}
 
 	@Override

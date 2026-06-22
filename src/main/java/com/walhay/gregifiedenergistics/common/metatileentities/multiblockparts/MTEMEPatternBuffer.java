@@ -21,6 +21,7 @@ import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.value.sync.SyncHandlers;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.layout.Grid;
@@ -32,6 +33,7 @@ import com.walhay.gregifiedenergistics.api.capability.InfiniteItemStackHandler;
 import com.walhay.gregifiedenergistics.api.capability.PatternBufferDualHandler;
 import com.walhay.gregifiedenergistics.api.capability.SegmentItemHandlerList;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
+import com.walhay.gregifiedenergistics.api.mui.GregifiedEnergisticsGuiTextures;
 import com.walhay.gregifiedenergistics.api.util.FluidCraftingUtils;
 import gregtech.api.capability.IMultipleTankHandler;
 import gregtech.api.capability.impl.FluidTankList;
@@ -43,6 +45,7 @@ import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
+import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.mui.GTGuis.PopupPanel;
 import gregtech.api.mui.widget.GhostCircuitSlotWidget;
@@ -193,7 +196,12 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 									}
 								}.slot(patternHandler, index)
 										.tooltipBuilder(rt ->
-												rt.addLine(IKey.lang("gregifiedenergistics.gui.buffer_contents_open"))))
+												rt.addLine(IKey.lang("gregifiedenergistics.gui.buffer_contents_open")))
+										.background(
+												GTGuiTextures.SLOT,
+												GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY
+														.asIcon()
+														.size(16)))
 						.build()
 						.horizontalCenter()
 						.top(7))
@@ -570,7 +578,9 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 									.minColWidth(18)
 									.minRowHeight(18)
 									.coverChildren()
-									.mapTo(slotsPerRow, slots, index -> new ItemSlot().slot(dualHandler, index)))
+									.mapTo(slotsPerRow, slots, index -> new ItemSlot()
+											.slot(SyncHandlers.itemSlot(dualInventory(), index)
+													.accessibility(false, false))))
 							.child(new Grid()
 									.minColWidth(18)
 									.minRowHeight(18)

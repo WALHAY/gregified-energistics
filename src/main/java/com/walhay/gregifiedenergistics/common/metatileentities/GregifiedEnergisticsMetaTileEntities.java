@@ -24,7 +24,7 @@ public class GregifiedEnergisticsMetaTileEntities {
 		ME_ASSEMBLY_LINE_OPTICAL_BUS = registerMetaTileEntity(
 				autoId(), new MTEMEAssemblyLineOpticalBus(location("me_assembly_line_optical_bus")));
 		ME_PATTERN_BUFFER = registerMetaTileEntity(autoId(), new MTEMEPatternBuffer(location("me_pattern_buffer")));
-		for (int i = 0; i < GTValues.UHV - GTValues.IV; ++i) {
+		for (int i = 0; i <= GTValues.UHV - GTValues.IV; ++i) {
 			int tier = GTValues.IV + i;
 			ME_PATTERN_PROVIDER[i] = registerMetaTileEntity(
 					autoId(), new MTEMEPatternProvider(location("me_pattern_provider_" + GTValues.VN[tier]), tier));
