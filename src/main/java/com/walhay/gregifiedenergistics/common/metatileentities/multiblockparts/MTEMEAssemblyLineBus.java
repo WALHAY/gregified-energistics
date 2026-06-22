@@ -57,7 +57,7 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 
 	@Override
 	public Widget<?> createPatternList(ModularPanel panel, PanelSyncManager syncHandler) {
-		panel.bindPlayerInventory();
+		panel.child(SlotGroupWidget.playerInventory(false).left(7).bottom(7));
 
 		return Flow.column()
 				.name("pattern list")

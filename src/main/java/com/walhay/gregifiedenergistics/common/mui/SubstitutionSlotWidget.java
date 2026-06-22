@@ -1,11 +1,13 @@
 package com.walhay.gregifiedenergistics.common.mui;
 
 import com.cleanroommc.modularui.api.IPanelHandler;
+import com.cleanroommc.modularui.api.UpOrDown;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.api.value.ISyncOrValue;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.utils.Alignment;
+import com.cleanroommc.modularui.utils.MouseData;
 import com.cleanroommc.modularui.value.sync.SyncHandler;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.ButtonWidget;
@@ -14,10 +16,12 @@ import com.walhay.gregifiedenergistics.api.patterns.ISubstitutionStorage;
 import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.unification.OreDictUnifier;
+import gregtech.client.utils.TooltipHelper;
 import java.io.IOException;
 import java.util.List;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.NotNull;
 
 public class SubstitutionSlotWidget extends Widget<SubstitutionSlotWidget> implements Interactable {
@@ -39,7 +43,7 @@ public class SubstitutionSlotWidget extends Widget<SubstitutionSlotWidget> imple
 	public SubstitutionSlotWidget storage(ISubstitutionStorage storage, String name) {
 		this.name = name;
 		this.items = OreDictUnifier.getAllWithOreDictionaryName(name);
-		this.syncHandler = new SubstituionSyncHandler(storage, name);
+		this.syncHandler = new SubstituionSyncHandler(storage, name, items.size());
 		setSyncOrValue(syncHandler);
 
 		return this;
@@ -105,19 +109,33 @@ public class SubstitutionSlotWidget extends Widget<SubstitutionSlotWidget> imple
 
 	@Override
 	public @NotNull Result onMousePressed(int mouseButton) {
-		selectorPanel().togglePanel();
+		if (mouseButton == 0 && TooltipHelper.isShiftDown()) {
+			selectorPanel().togglePanel();
+		} else {
+			MouseData mouseData = MouseData.create(mouseButton);
+			syncHandler.syncToServer(2, mouseData::writeToPacket);
+		}
 		return Result.SUCCESS;
+	}
+
+	@Override
+	public boolean onMouseScroll(UpOrDown scrollDirection, int amount) {
+		MouseData mouseData = MouseData.create(scrollDirection.modifier);
+		syncHandler.syncToServer(3, mouseData::writeToPacket);
+		return true;
 	}
 
 	public class SubstituionSyncHandler extends SyncHandler {
 
 		private final ISubstitutionStorage storage;
 		private final String name;
+		private final int options;
 		public static final int SET_SUBSTITUTION = 0;
 
-		public SubstituionSyncHandler(ISubstitutionStorage storage, String name) {
+		public SubstituionSyncHandler(ISubstitutionStorage storage, String name, int options) {
 			this.storage = storage;
 			this.name = name;
+			this.options = options;
 		}
 
 		@Override
@@ -131,6 +149,10 @@ public class SubstitutionSlotWidget extends Widget<SubstitutionSlotWidget> imple
 		public void readOnServer(int id, PacketBuffer buf) throws IOException {
 			if (id == SET_SUBSTITUTION) {
 				setSubstitution(buf.readVarInt());
+			} else if (id == 2) {
+				phantomClick(MouseData.readPacket(buf));
+			} else if (id == 3) {
+				phantomScroll(MouseData.readPacket(buf));
 			}
 		}
 
@@ -143,7 +165,23 @@ public class SubstitutionSlotWidget extends Widget<SubstitutionSlotWidget> imple
 			return false;
 		}
 
-		public int getOption() {
+		protected int getNextOption(int value) {
+			return MathHelper.clamp(getOption() + value, 0, options - 1);
+		}
+
+		protected void phantomClick(MouseData mouseData) {
+			if (mouseData.mouseButton == 0) {
+				setSubstitution(getNextOption(1));
+			} else if (mouseData.mouseButton == 1) {
+				setSubstitution(getNextOption(-1));
+			}
+		}
+
+		protected void phantomScroll(MouseData mouseData) {
+			setSubstitution(getNextOption(mouseData.mouseButton));
+		}
+
+		protected int getOption() {
 			return storage.getOption(name);
 		}
 	}

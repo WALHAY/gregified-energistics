@@ -3,7 +3,6 @@ package com.walhay.gregifiedenergistics.common.metatileentities.multiblockparts;
 import static com.walhay.gregifiedenergistics.api.mui.GregifiedEnergisticsGuiTextures.BLOCKING_MODE;
 import static com.walhay.gregifiedenergistics.api.patterns.substitutions.SubstitutionStorage.STORAGE_TAG;
 import static com.walhay.gregifiedenergistics.api.util.BlockingMode.BLOCKING_MODE_TAG;
-import static gregtech.api.mui.GTGuiTextures.BUTTON_POWER;
 
 import appeng.api.AEApi;
 import appeng.api.config.Actionable;
@@ -20,6 +19,7 @@ import codechicken.lib.render.pipeline.IVertexOperation;
 import codechicken.lib.vec.Matrix4;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.drawable.GuiTextures;
+import com.cleanroommc.modularui.drawable.Icon;
 import com.cleanroommc.modularui.drawable.ItemDrawable;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -54,6 +54,7 @@ import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
+import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
 import gregtech.client.renderer.texture.cube.SimpleOverlayRenderer;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -143,12 +144,8 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 
 	@Override
 	public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager sync, UISettings settings) {
-		sync.syncValue("working_enabled", new BooleanSyncValue(this::isWorkingEnabled, this::setWorkingEnabled));
-		sync.syncValue("fluid_mode", new BooleanSyncValue(this::getUsingFluids, this::setUsingFluids));
-		sync.syncValue(
-				"blocking_mode", new EnumSyncValue<>(BlockingMode.class, this::getBlockingMode, this::setBlockingMode));
 
-		ModularPanel panel = GTGuis.createPanel(this, 176, 200);
+		ModularPanel panel = GTGuis.createPanel(this, 199, 200);
 
 		var controller = new PagedWidget.Controller();
 
@@ -200,30 +197,49 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 			paged.addPage(substitutionList);
 		}
 
-		return panel.child(new ItemSlot().slot(importItems, 0).pos(7, 7).size(18))
-				.child(Flow.column()
-						.width(16)
-						.left(-18)
-						.top(0)
-						.childPadding(2)
-						.child(new ToggleButton()
-								.syncHandler("working_enabled")
-								.size(16)
-								.overlay(false, BUTTON_POWER[0])
-								.overlay(true, BUTTON_POWER[1]))
-						.child(new ToggleButton()
-								.syncHandler("fluid_mode")
-								.size(16)
-								.overlay(false, new ItemDrawable(Items.BUCKET))
-								.overlay(true, new ItemDrawable(Items.WATER_BUCKET)))
-						.child(new CycleButtonWidget()
-								.syncHandler("blocking_mode")
-								.size(16)
-								.stateOverlay(0, BLOCKING_MODE[0])
-								.stateOverlay(1, BLOCKING_MODE[1])
-								.stateOverlay(2, BLOCKING_MODE[2])))
+		return panel.child(createButtonBar(sync))
 				.child(tabs)
-				.child(paged.top(28).widthRel(0.9f).controller(controller));
+				.child(paged.top(7).widthRel(0.9f).controller(controller));
+	}
+
+	public Flow createButtonBar(PanelSyncManager sync) {
+		BooleanSyncValue workingStateValue = new BooleanSyncValue(this::isWorkingEnabled, this::setWorkingEnabled);
+		BooleanSyncValue fluidStateValue = new BooleanSyncValue(this::getUsingFluids, this::setUsingFluids);
+		EnumSyncValue<BlockingMode> blockingStateValue =
+				new EnumSyncValue<>(BlockingMode.class, this::getBlockingMode, this::setBlockingMode);
+
+		sync.syncValue("working_enabled", workingStateValue);
+		sync.syncValue("fluid_mode", fluidStateValue);
+		sync.syncValue("blocking_mode", blockingStateValue);
+
+		Icon detail = GTGuiTextures.BUTTON_POWER_DETAIL.asIcon().size(18, 6).marginTop(24);
+
+		return Flow.column()
+				.right(7)
+				.bottom(7)
+				.width(18)
+				.height(18 * 4 + 5)
+				.child(new ToggleButton()
+						.name("power_button")
+						.size(18)
+						.disableHoverBackground()
+						.overlay(true, detail, GTGuiTextures.BUTTON_POWER[1])
+						.overlay(false, detail, GTGuiTextures.BUTTON_POWER[0])
+						.value(workingStateValue)
+						.marginTop(4)
+						.top(18 * 3 + 5))
+				.child(new ToggleButton()
+						.value(fluidStateValue)
+						.top(18 * 2)
+						.overlay(false, new ItemDrawable(Items.BUCKET))
+						.overlay(true, new ItemDrawable(Items.WATER_BUCKET)))
+				.child(new CycleButtonWidget()
+						.value(blockingStateValue)
+						.top(18)
+						.stateOverlay(0, BLOCKING_MODE[0])
+						.stateOverlay(1, BLOCKING_MODE[1])
+						.stateOverlay(2, BLOCKING_MODE[2]))
+				.child(new ItemSlot().slot(importItems, 0).size(18));
 	}
 
 	public Widget<?> createPatternList(ModularPanel panel, PanelSyncManager syncHandler) {
