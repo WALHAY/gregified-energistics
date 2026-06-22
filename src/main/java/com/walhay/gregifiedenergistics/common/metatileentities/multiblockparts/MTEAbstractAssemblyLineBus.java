@@ -177,6 +177,8 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 									.get())
 							.asIcon()
 							.size(16)));
+
+			paged.addPage(patternList);
 		}
 
 		var substitutionList = createSubstitutionList(panel, sync);
@@ -194,13 +196,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 									.get())
 							.asIcon()
 							.size(16)));
-		}
 
-		if (patternList != null) {
-			paged.addPage(patternList);
-		}
-
-		if (substitutionList != null) {
 			paged.addPage(substitutionList);
 		}
 
@@ -251,7 +247,6 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	}
 
 	@Override
-	@SuppressWarnings("UnstableApiUsage")
 	public boolean usesMui2() {
 		return true;
 	}

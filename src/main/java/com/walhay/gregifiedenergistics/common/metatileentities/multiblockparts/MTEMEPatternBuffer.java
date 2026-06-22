@@ -569,7 +569,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			return (PopupPanel) GTGuis.createPopupPanel("buffer_contents#" + slot, width, height)
 					.child(IKey.lang("gregifiedenergistics.gui.buffer_contents", slot)
 							.asWidget()
-							.horizontalCenter())
+							.pos(7, 7))
 					.child(Flow.row()
 							.coverChildrenWidth()
 							.horizontalCenter()
