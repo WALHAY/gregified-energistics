@@ -5,6 +5,7 @@ import appeng.api.networking.crafting.ICraftingProviderHelper;
 import appeng.api.storage.channels.IItemStorageChannel;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.items.misc.ItemEncodedPattern;
+import codechicken.lib.raytracer.CuboidRayTraceResult;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
@@ -20,7 +21,10 @@ import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
 import gregtech.api.GTValues;
+import gregtech.api.capability.GregtechDataCodes;
+import gregtech.api.capability.IGhostSlotConfigurable;
 import gregtech.api.capability.impl.GhostCircuitItemStackHandler;
+import gregtech.api.capability.impl.ItemHandlerList;
 import gregtech.api.capability.impl.NotifiableItemStackHandler;
 import gregtech.api.items.itemhandlers.GTItemStackHandler;
 import gregtech.api.metatileentity.MetaTileEntity;
@@ -28,32 +32,55 @@ import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
 import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
+import gregtech.api.metatileentity.multiblock.MultiblockControllerBase;
 import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.mui.widget.GhostCircuitSlotWidget;
+import gregtech.api.util.GTHashMaps;
 import gregtech.api.util.GTTransferUtils;
+import gregtech.common.metatileentities.multi.multiblockpart.MetaTileEntityItemBus;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import net.minecraft.client.resources.I18n;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.TextComponentTranslation;
+import net.minecraft.world.World;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /** MTEMEPatternProvider */
 public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItemStack>
-		implements IMultiblockAbilityPart<IItemHandlerModifiable> {
+		implements IMultiblockAbilityPart<IItemHandlerModifiable>, IGhostSlotConfigurable {
 
-	private boolean workingEnabled = true;
-	private final GhostCircuitItemStackHandler circuitInventory;
+	private GhostCircuitItemStackHandler circuitInventory;
 	private final SinglePatternHandler patternInventory;
-	private boolean autoCollapse = true;
+	private ItemHandlerList actualImportItems;
+	private boolean workingEnabled;
+	private boolean autoCollapse;
 
 	public MTEMEPatternProvider(ResourceLocation metaTileEntityId, int tier) {
 		super(metaTileEntityId, tier, false, IItemStorageChannel.class);
-		this.circuitInventory = new GhostCircuitItemStackHandler(this);
 		this.patternInventory = new SinglePatternHandler();
+	}
+
+	@Override
+	public void setWorkingEnabled(boolean workingEnabled) {
+		this.workingEnabled = workingEnabled;
+		var world = getWorld();
+		if (world != null && !world.isRemote) {
+			writeCustomData(GregtechDataCodes.WORKING_ENABLED, buf -> buf.writeBoolean(workingEnabled));
+			notifyPatternChange();
+		}
 	}
 
 	@Override
@@ -62,21 +89,26 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	}
 
 	@Override
-	public void setWorkingEnabled(boolean isWorkingEnabled) {
-		if (this.workingEnabled != isWorkingEnabled) {
-			this.workingEnabled = isWorkingEnabled;
-			notifyPatternChange();
+	public void update() {
+		super.update();
+		if (getWorld().isRemote || getOffsetTimer() % 5 != 0) {
+			return;
+		}
+
+		if (isWorkingEnabled()) {
+			pullItemsFromNearbyHandlers(getFrontFacing());
+		}
+
+		if (isAutoCollapse()) {
+			if (!isAttachedToMultiBlock() || this.getNotifiedItemInputList().contains(importItems)) {
+				collapseInventorySlotContents(importItems);
+			}
 		}
 	}
 
 	@Override
 	public MetaTileEntity createMetaTileEntity(IGregTechTileEntity handler) {
 		return new MTEMEPatternProvider(metaTileEntityId, getTier());
-	}
-
-	@Override
-	public boolean usesMui2() {
-		return true;
 	}
 
 	@Override
@@ -112,8 +144,39 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	}
 
 	@Override
+	protected void initializeInventory() {
+		super.initializeInventory();
+		this.circuitInventory = new GhostCircuitItemStackHandler(this);
+		this.circuitInventory.addNotifiableMetaTileEntity(this);
+		this.actualImportItems = new ItemHandlerList(Arrays.asList(importItems, circuitInventory));
+	}
+
+	protected int getInventorySize() {
+		int sizeRoot = 1 + Math.min(GTValues.UHV, getTier());
+		return sizeRoot * sizeRoot;
+	}
+
+	@Override
 	protected IItemHandlerModifiable createImportItemHandler() {
 		return new NotifiableItemStackHandler(this, getInventorySize(), getController(), false);
+	}
+
+	@Override
+	public IItemHandlerModifiable getImportItems() {
+		return actualImportItems;
+	}
+
+	@Override
+	public void addToMultiBlock(MultiblockControllerBase controller) {
+		super.addToMultiBlock(controller);
+		this.circuitInventory.addNotifiableMetaTileEntity(controller);
+		this.circuitInventory.addToNotifiedList(this, this.circuitInventory, false);
+	}
+
+	@Override
+	public void removeFromMultiBlock(MultiblockControllerBase controller) {
+		super.removeFromMultiBlock(controller);
+		this.circuitInventory.removeNotifiableMetaTileEntity(controller);
 	}
 
 	@Override
@@ -123,7 +186,57 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 
 	@Override
 	public void registerAbilities(@NotNull AbilityInstances ability) {
-		ability.add(importItems);
+		ability.add(actualImportItems);
+	}
+
+	@Override
+	public void writeInitialSyncData(PacketBuffer buf) {
+		super.writeInitialSyncData(buf);
+		buf.writeBoolean(workingEnabled);
+		buf.writeBoolean(autoCollapse);
+	}
+
+	@Override
+	public void receiveInitialSyncData(PacketBuffer buf) {
+		super.receiveInitialSyncData(buf);
+		this.workingEnabled = buf.readBoolean();
+		this.autoCollapse = buf.readBoolean();
+	}
+
+	@Override
+	public NBTTagCompound writeToNBT(NBTTagCompound data) {
+		super.writeToNBT(data);
+		data.setBoolean("workingEnabled", workingEnabled);
+		data.setBoolean("autoCollapse", autoCollapse);
+		this.circuitInventory.write(data);
+		return data;
+	}
+
+	@Override
+	public void readFromNBT(NBTTagCompound data) {
+		super.readFromNBT(data);
+		if (data.hasKey("workingEnabled")) {
+			this.workingEnabled = data.getBoolean("workingEnabled");
+		}
+		if (data.hasKey("autoCollapse")) {
+			this.autoCollapse = data.getBoolean("autoCollapse");
+		}
+		this.circuitInventory.read(data);
+	}
+
+	@Override
+	public void receiveCustomData(int dataId, PacketBuffer buf) {
+		super.receiveCustomData(dataId, buf);
+		if (dataId == GregtechDataCodes.TOGGLE_COLLAPSE_ITEMS) {
+			this.autoCollapse = buf.readBoolean();
+		} else if (dataId == GregtechDataCodes.WORKING_ENABLED) {
+			this.workingEnabled = buf.readBoolean();
+		}
+	}
+
+	@Override
+	public boolean usesMui2() {
+		return true;
 	}
 
 	@Override
@@ -195,9 +308,107 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 						.child(new ItemSlot().slot(patternInventory, 0).top(18).background(GTGuiTextures.SLOT)));
 	}
 
-	protected int getInventorySize() {
-		int sizeRoot = 1 + Math.min(GTValues.UHV, getTier());
-		return sizeRoot * sizeRoot;
+	/** Exact copy of {@link MetaTileEntityItemBus#collapseInventorySlotContents(IItemHandlerModifiable)} */
+	private static void collapseInventorySlotContents(IItemHandlerModifiable inventory) {
+		// Gather a snapshot of the provided inventory
+		Object2IntMap<ItemStack> inventoryContents = GTHashMaps.fromItemHandler(inventory, true);
+
+		List<ItemStack> inventoryItemContents = new ArrayList<>();
+
+		// Populate the list of item stacks in the inventory with apportioned item stacks, for easy replacement
+		for (Object2IntMap.Entry<ItemStack> e : inventoryContents.object2IntEntrySet()) {
+			ItemStack stack = e.getKey();
+			int count = e.getIntValue();
+			int maxStackSize = stack.getMaxStackSize();
+			while (count >= maxStackSize) {
+				ItemStack copy = stack.copy();
+				copy.setCount(maxStackSize);
+				inventoryItemContents.add(copy);
+				count -= maxStackSize;
+			}
+			if (count > 0) {
+				ItemStack copy = stack.copy();
+				copy.setCount(count);
+				inventoryItemContents.add(copy);
+			}
+		}
+
+		for (int i = 0; i < inventory.getSlots(); i++) {
+			ItemStack stackToMove;
+			// Ensure that we are not exceeding the List size when attempting to populate items
+			if (i >= inventoryItemContents.size()) {
+				stackToMove = ItemStack.EMPTY;
+			} else {
+				stackToMove = inventoryItemContents.get(i);
+			}
+
+			// Populate the slots
+			inventory.setStackInSlot(i, stackToMove);
+		}
+	}
+
+	@Override
+	public boolean onScrewdriverClick(
+			EntityPlayer playerIn, EnumHand hand, EnumFacing facing, CuboidRayTraceResult hitResult) {
+		setAutoCollapse(!this.autoCollapse);
+
+		if (!getWorld().isRemote) {
+			if (this.autoCollapse) {
+				playerIn.sendStatusMessage(new TextComponentTranslation("gregtech.bus.collapse_true"), true);
+			} else {
+				playerIn.sendStatusMessage(new TextComponentTranslation("gregtech.bus.collapse_false"), true);
+			}
+		}
+		return true;
+	}
+
+	public boolean isAutoCollapse() {
+		return autoCollapse;
+	}
+
+	public void setAutoCollapse(boolean inverted) {
+		autoCollapse = inverted;
+		if (!getWorld().isRemote) {
+			if (autoCollapse) {
+				addNotifiedInput(super.getImportItems());
+			}
+			writeCustomData(
+					GregtechDataCodes.TOGGLE_COLLAPSE_ITEMS, packetBuffer -> packetBuffer.writeBoolean(autoCollapse));
+			notifyBlockUpdate();
+			markDirty();
+		}
+	}
+
+	@Override
+	public boolean hasGhostCircuitInventory() {
+		return true;
+	}
+
+	@Override
+	public void setGhostCircuitConfig(int config) {
+		if (this.circuitInventory == null || this.circuitInventory.getCircuitValue() == config) {
+			return;
+		}
+		this.circuitInventory.setCircuitValue(config);
+		if (!getWorld().isRemote) {
+			markDirty();
+		}
+	}
+
+	@Override
+	public void addInformation(
+			ItemStack stack, @Nullable World player, @NotNull List<String> tooltip, boolean advanced) {
+		tooltip.add(I18n.format("gregtech.machine.item_bus.import.tooltip"));
+		tooltip.add(I18n.format("gregtech.universal.tooltip.item_storage_capacity", getInventorySize()));
+		tooltip.add(I18n.format("gregtech.universal.enabled"));
+	}
+
+	@Override
+	public void addToolUsages(ItemStack stack, @Nullable World world, List<String> tooltip, boolean advanced) {
+		tooltip.add(I18n.format("gregtech.tool_action.screwdriver.access_covers"));
+		tooltip.add(I18n.format("gregtech.tool_action.screwdriver.auto_collapse"));
+		tooltip.add(I18n.format("gregtech.tool_action.wrench.set_facing"));
+		super.addToolUsages(stack, world, tooltip, advanced);
 	}
 
 	private class SinglePatternHandler extends AbstractPatternItemHandler {
