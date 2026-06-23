@@ -15,21 +15,13 @@ import appeng.api.storage.data.IAEItemStack;
 import appeng.fluids.util.AEFluidStack;
 import appeng.items.misc.ItemEncodedPattern;
 import appeng.util.item.AEItemStack;
-import com.cleanroommc.modularui.api.IPanelHandler;
-import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.value.sync.DynamicSyncHandler;
-import com.cleanroommc.modularui.value.sync.ItemSlotSH;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
 import com.cleanroommc.modularui.value.sync.SyncHandlers;
-import com.cleanroommc.modularui.widgets.DynamicSyncedWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
-import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.cleanroommc.modularui.widgets.layout.Grid;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
-import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.glodblock.github.common.item.fake.FakeFluids;
 import com.glodblock.github.common.item.fake.FakeItemRegister;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
@@ -51,11 +43,7 @@ import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
 import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
-import gregtech.api.mui.GTGuis.PopupPanel;
-import gregtech.api.mui.sync.GTFluidSyncHandler;
-import gregtech.api.mui.widget.GhostCircuitSlotWidget;
 import gregtech.api.util.GTTransferUtils;
-import gregtech.common.mui.widget.GTFluidSlot;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -67,7 +55,6 @@ import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.Constants.NBT;
@@ -78,7 +65,6 @@ import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.input.Keyboard;
 
 /** MTEMEPatternBuffer */
 public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemStack>
@@ -180,46 +166,21 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	@Override
 	public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager panelSyncManager, UISettings settings) {
 		panelSyncManager.registerSlotGroup("pattern_inv", 9);
-		for (var container : patternHandler.containers) {
-			container.dsh = new DynamicSyncHandler();
-		}
 
-		return GTGuis.createPanel(this, 176, 200)
+		return GTGuis.createPanel(this, 176, 166)
 				.child(SlotGroupWidget.builder()
 						.slotGroup("pattern_inv")
 						.matrix("IIIIIIIII", "IIIIIIIII", "IIIIIIIII", "IIIIIIIII")
-						.key(
-								'I',
-								index -> new ItemSlot() {
-									private IPanelHandler contentsPanel = panelSyncManager.syncedPanel(
-											"buffer_contents#" + index, true, (parent, player) -> patternHandler
-													.getContainers()
-													.get(index)
-													.buildUI(panelSyncManager, index));
-
-									@Override
-									public @NotNull Result onKeyPressed(char typedChar, int keyCode) {
-										if (keyCode == Keyboard.KEY_B) {
-											if (contentsPanel != null) {
-												contentsPanel.togglePanel();
-												return Result.SUCCESS;
-											}
-										}
-										return super.onKeyPressed(typedChar, keyCode);
-									}
-								}.slot(SyncHandlers.itemSlot(patternHandler, index)
-												.changeListener((newItem, onlyAmountChanged, client, init) -> {
-													if (onlyAmountChanged) {
-														patternHandler.onContentsChanged(index);
-													}
-												}))
-										.tooltipBuilder(rt ->
-												rt.addLine(IKey.lang("gregifiedenergistics.gui.buffer_contents_open")))
-										.background(
-												GTGuiTextures.SLOT,
-												GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY
-														.asIcon()
-														.size(16)))
+						.key('I', index -> new ItemSlot()
+								.slot(SyncHandlers.itemSlot(patternHandler, index)
+										.changeListener((newItem, onlyAmountChanged, client, init) -> {
+											patternHandler.onContentsChanged(index);
+										}))
+								.background(
+										GTGuiTextures.SLOT,
+										GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY
+												.asIcon()
+												.size(16)))
 						.build()
 						.horizontalCenter()
 						.top(7))
@@ -407,12 +368,8 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		private GhostCircuitItemStackHandler circuitInventory;
 		private PatternBufferDualHandler dualHandler;
 		private FluidTankList fluidInventory;
-		private final int index;
-
-		private DynamicSyncHandler dsh;
 
 		public PatternContainer(int index) {
-			this.index = index;
 			this.itemInventory = new InfiniteItemStackHandler(0);
 
 			this.circuitInventory = new GhostCircuitItemStackHandler(MTEMEPatternBuffer.this) {
@@ -439,6 +396,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 						.size();
 				items = pattern.getCondensedInputs().length - fluids;
 			}
+
 			this.itemInventory.setSize(items);
 			this.dualHandler.onResize();
 
@@ -455,9 +413,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 			this.fluidInventory = new FluidTankList(false, fluidTanks);
 			this.dualHandler.setFluidDelegate(fluidInventory);
-			if (dsh != null) {
-				dsh.notifyUpdate(buf -> buf.writeInt(itemInventory.getSlots()));
-			}
 		}
 
 		@Nullable public ICraftingPatternDetails getPattern() {
@@ -584,48 +539,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			if (data.hasKey("CircuitInventory", Constants.NBT.TAG_COMPOUND)) {
 				circuitInventory.read(data.getCompoundTag("CircuitInventory"));
 			}
-		}
-
-		private Flow contentWidget(PanelSyncManager panelSyncManager, PacketBuffer buffer) {
-			Grid itemGrid = new Grid()
-					.minColWidth(18)
-					.minRowHeight(18)
-					.coverChildren()
-					.mapTo(3, inventory().getSlots(), slot -> {
-						ModularSlot ms = new ModularSlot(inventory(), slot).accessibility(false, false);
-						ItemSlotSH slotSyncHandler = panelSyncManager.getOrCreateSyncHandler(
-								"buffer" + index + "slot" + slot, ItemSlotSH.class, () -> new ItemSlotSH(ms));
-						return new ItemSlot().syncHandler(slotSyncHandler);
-					});
-
-			Grid fluidGrid = new Grid()
-					.left(18 * 3 + 8)
-					.minColWidth(18)
-					.minRowHeight(18)
-					.coverChildren()
-					.mapTo(3, fluidInventory.getFluidTanks(), (slot, tank) -> {
-						GTFluidSyncHandler fluidSyncHandler = panelSyncManager.getOrCreateSyncHandler(
-								"buffer" + index + "fluid" + slot,
-								GTFluidSyncHandler.class,
-								() -> new GTFluidSyncHandler(tank));
-						return new GTFluidSlot().syncHandler(fluidSyncHandler);
-					});
-
-			return Flow.row().horizontalCenter().child(itemGrid).child(fluidGrid);
-		}
-
-		public PopupPanel buildUI(PanelSyncManager syncManager, int slot) {
-			int width = 7 + 18 * 3 + 8 + 18 * 3 + 8 + 18 + 7;
-			int height = 100;
-
-			this.dsh.widgetProvider(this::contentWidget);
-
-			return (PopupPanel) GTGuis.createPopupPanel("buffer_contents#" + slot, width, height)
-					.child(IKey.lang("gregifiedenergistics.gui.buffer_contents", slot)
-							.asWidget()
-							.pos(7, 7))
-					.child(new DynamicSyncedWidget<>().left(7).top(20).syncHandler(this.dsh))
-					.child(new GhostCircuitSlotWidget().right(7).top(20).slot(circuitInventory, 0));
 		}
 	}
 }

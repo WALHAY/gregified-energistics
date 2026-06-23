@@ -76,9 +76,7 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 						.key('I', index -> new ItemSlot()
 								.slot(SyncHandlers.itemSlot(patternHandler, index)
 										.changeListener((newItem, onlyAmountChanged, client, init) -> {
-											if (onlyAmountChanged) {
-												patternHandler.onContentsChanged(index);
-											}
+											patternHandler.onContentsChanged(index);
 										}))
 								.background(
 										GTGuiTextures.SLOT,

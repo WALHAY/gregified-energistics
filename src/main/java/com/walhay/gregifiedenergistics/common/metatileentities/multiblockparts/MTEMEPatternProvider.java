@@ -316,9 +316,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 						.child(new ItemSlot()
 								.slot(SyncHandlers.itemSlot(patternHandler, 0)
 										.changeListener((newItem, onlyAmountChanged, client, init) -> {
-											if (onlyAmountChanged) {
-												patternHandler.onContentsChanged(0);
-											}
+											patternHandler.onContentsChanged(0);
 										}))
 								.horizontalCenter()
 								.background(
