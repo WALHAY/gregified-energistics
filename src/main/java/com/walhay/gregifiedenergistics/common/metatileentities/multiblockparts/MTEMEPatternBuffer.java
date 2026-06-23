@@ -20,12 +20,15 @@ import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.value.sync.DynamicSyncHandler;
+import com.cleanroommc.modularui.value.sync.ItemSlotSH;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.value.sync.SyncHandlers;
+import com.cleanroommc.modularui.widgets.DynamicSyncedWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
 import com.cleanroommc.modularui.widgets.layout.Grid;
 import com.cleanroommc.modularui.widgets.slot.ItemSlot;
+import com.cleanroommc.modularui.widgets.slot.ModularSlot;
 import com.glodblock.github.common.item.fake.FakeFluids;
 import com.glodblock.github.common.item.fake.FakeItemRegister;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
@@ -48,6 +51,7 @@ import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
 import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.mui.GTGuis.PopupPanel;
+import gregtech.api.mui.sync.GTFluidSyncHandler;
 import gregtech.api.mui.widget.GhostCircuitSlotWidget;
 import gregtech.api.util.GTTransferUtils;
 import gregtech.common.mui.widget.GTFluidSlot;
@@ -62,8 +66,10 @@ import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.util.Constants;
+import net.minecraftforge.common.util.Constants.NBT;
 import net.minecraftforge.common.util.INBTSerializable;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.FluidTank;
@@ -172,6 +178,10 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 	@Override
 	public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager panelSyncManager, UISettings settings) {
+		for (var container : patternHandler.containers) {
+			container.dsh = new DynamicSyncHandler();
+		}
+
 		return GTGuis.createPanel(this, 176, 200)
 				.child(SlotGroupWidget.builder()
 						.matrix("IIIIIIIII", "IIIIIIIII", "IIIIIIIII", "IIIIIIIII")
@@ -230,7 +240,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		super.writeToNBT(data);
 
 		data.setTag("PatternInventory", patternHandler.serializeNBT());
-		data.setTag("PatternContainers", patternHandler.serializeContainersNBT());
 
 		return data;
 	}
@@ -240,9 +249,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		super.readFromNBT(data);
 		if (data.hasKey("PatternInventory")) {
 			patternHandler.deserializeNBT(data.getCompoundTag("PatternInventory"));
-		}
-		if (data.hasKey("PatternContainers", Constants.NBT.TAG_LIST)) {
-			patternHandler.deserializeContainersNBT(data.getTagList("PatternContainers", Constants.NBT.TAG_COMPOUND));
 		}
 	}
 
@@ -256,7 +262,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			super(size);
 			this.containers = new PatternContainer[size];
 			for (int i = 0; i < size; ++i) {
-				this.containers[i] = new PatternContainer();
+				this.containers[i] = new PatternContainer(i);
 			}
 			this.patternToContainer = new Object2ObjectOpenHashMap<>(size);
 		}
@@ -341,7 +347,10 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			return getContainers().iterator();
 		}
 
-		public NBTTagList serializeContainersNBT() {
+		@Override
+		public NBTTagCompound serializeNBT() {
+			var nbt = super.serializeNBT();
+
 			var list = new NBTTagList();
 			for (int i = 0; i < containers.length; ++i) {
 				var entry = new NBTTagCompound();
@@ -351,10 +360,16 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 				list.appendTag(entry);
 			}
-			return list;
+
+			nbt.setTag("Containers", list);
+			return nbt;
 		}
 
-		public void deserializeContainersNBT(NBTTagList list) {
+		@Override
+		public void deserializeNBT(NBTTagCompound nbt) {
+			super.deserializeNBT(nbt);
+
+			var list = nbt.getTagList("Containers", NBT.TAG_COMPOUND);
 			for (int i = 0; i < list.tagCount(); ++i) {
 				var entry = list.getCompoundTagAt(i);
 				if (!entry.hasKey("Slot", Constants.NBT.TAG_INT)) continue;
@@ -384,8 +399,12 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		private GhostCircuitItemStackHandler circuitInventory;
 		private PatternBufferDualHandler dualHandler;
 		private FluidTankList fluidInventory;
+		private final int index;
 
-		public PatternContainer() {
+		private DynamicSyncHandler dsh;
+
+		public PatternContainer(int index) {
+			this.index = index;
 			this.itemInventory = new InfiniteItemStackHandler(0);
 
 			this.circuitInventory = new GhostCircuitItemStackHandler(MTEMEPatternBuffer.this) {
@@ -428,6 +447,9 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 			this.fluidInventory = new FluidTankList(false, fluidTanks);
 			this.dualHandler.setFluidDelegate(fluidInventory);
+			if (dsh != null) {
+				dsh.notifyUpdate(buf -> buf.writeInt(itemInventory.getSlots()));
+			}
 		}
 
 		@Nullable public ICraftingPatternDetails getPattern() {
@@ -556,40 +578,46 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			}
 		}
 
+		private Flow contentWidget(PanelSyncManager panelSyncManager, PacketBuffer buffer) {
+			Grid itemGrid = new Grid()
+					.minColWidth(18)
+					.minRowHeight(18)
+					.coverChildren()
+					.mapTo(3, inventory().getSlots(), slot -> {
+						ModularSlot ms = new ModularSlot(inventory(), slot).accessibility(false, false);
+						ItemSlotSH slotSyncHandler = panelSyncManager.getOrCreateSyncHandler(
+								"buffer" + index + "slot" + slot, ItemSlotSH.class, () -> new ItemSlotSH(ms));
+						return new ItemSlot().syncHandler(slotSyncHandler);
+					});
+
+			Grid fluidGrid = new Grid()
+					.left(18 * 3 + 8)
+					.minColWidth(18)
+					.minRowHeight(18)
+					.coverChildren()
+					.mapTo(3, fluidInventory.getFluidTanks(), (slot, tank) -> {
+						GTFluidSyncHandler fluidSyncHandler = panelSyncManager.getOrCreateSyncHandler(
+								"buffer" + index + "fluid" + slot,
+								GTFluidSyncHandler.class,
+								() -> new GTFluidSyncHandler(tank));
+						return new GTFluidSlot().syncHandler(fluidSyncHandler);
+					});
+
+			return Flow.row().horizontalCenter().child(itemGrid).child(fluidGrid);
+		}
+
 		public PopupPanel buildUI(PanelSyncManager syncManager, int slot) {
-			int slots = itemInventory.getSlots();
-			int slotsPerRow = (int) Math.ceil(Math.sqrt(slots));
+			int width = 7 + 18 * 3 + 8 + 18 * 3 + 8 + 18 + 7;
+			int height = 100;
 
-			int tanks = fluidInventory.getTanks();
-			int tanksPerRow = (int) Math.ceil(Math.sqrt(tanks));
-
-			int width = 50 + Math.max(20, slotsPerRow * 18 + 22 + tanksPerRow * 18);
-			int height = 22 + Math.max(20, 18 * Math.max(slotsPerRow, tanksPerRow));
+			this.dsh.widgetProvider(this::contentWidget);
 
 			return (PopupPanel) GTGuis.createPopupPanel("buffer_contents#" + slot, width, height)
 					.child(IKey.lang("gregifiedenergistics.gui.buffer_contents", slot)
 							.asWidget()
 							.pos(7, 7))
-					.child(Flow.row()
-							.coverChildrenWidth()
-							.horizontalCenter()
-							.childPadding(8)
-							.child(new Grid()
-									.minColWidth(18)
-									.minRowHeight(18)
-									.coverChildren()
-									.mapTo(slotsPerRow, slots, index -> new ItemSlot()
-											.slot(SyncHandlers.itemSlot(dualInventory(), index)
-													.accessibility(false, false))))
-							.child(new Grid()
-									.minColWidth(18)
-									.minRowHeight(18)
-									.coverChildren()
-									.mapTo(
-											tanksPerRow,
-											fluidInventory.getFluidTanks(),
-											(index, tank) -> new GTFluidSlot().syncHandler(tank)))
-							.child(new GhostCircuitSlotWidget().slot(circuitInventory, 0)));
+					.child(new DynamicSyncedWidget<>().left(7).top(20).syncHandler(this.dsh))
+					.child(new GhostCircuitSlotWidget().right(7).top(20).slot(circuitInventory, 0));
 		}
 	}
 }

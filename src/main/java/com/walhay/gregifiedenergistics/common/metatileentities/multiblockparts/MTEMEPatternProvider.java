@@ -191,6 +191,12 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	}
 
 	@Override
+	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
+		super.clearMachineInventory(itemBuffer);
+		clearInventory(itemBuffer, patternInventory);
+	}
+
+	@Override
 	public void writeInitialSyncData(PacketBuffer buf) {
 		super.writeInitialSyncData(buf);
 		buf.writeBoolean(workingEnabled);
