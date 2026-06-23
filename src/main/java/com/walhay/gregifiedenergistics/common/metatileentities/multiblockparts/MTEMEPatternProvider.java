@@ -65,14 +65,14 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 		implements IMultiblockAbilityPart<IItemHandlerModifiable>, IGhostSlotConfigurable {
 
 	private GhostCircuitItemStackHandler circuitInventory;
-	private final SinglePatternHandler patternInventory;
+	private final SinglePatternHandler patternHandler;
 	private ItemHandlerList actualImportItems;
 	private boolean workingEnabled = true;
 	private boolean autoCollapse = false;
 
 	public MTEMEPatternProvider(ResourceLocation metaTileEntityId, int tier) {
 		super(metaTileEntityId, tier, false, IItemStorageChannel.class);
-		this.patternInventory = new SinglePatternHandler();
+		this.patternHandler = new SinglePatternHandler();
 	}
 
 	@Override
@@ -112,7 +112,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	@Override
 	public void provideCrafting(ICraftingProviderHelper provider) {
 		if (isWorkingEnabled()) {
-			for (var pattern : patternInventory.getPatterns()) {
+			for (var pattern : patternHandler.getPatterns()) {
 				if (pattern == null) continue;
 
 				provider.addCraftingOption(getCraftingProvider(), pattern);
@@ -127,7 +127,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 
 	@Override
 	public boolean pushPattern(ICraftingPatternDetails pattern, InventoryCrafting inventory) {
-		if (!isWorkingEnabled() || !patternInventory.getPatterns().contains(pattern)) return false;
+		if (!isWorkingEnabled() || !patternHandler.getPatterns().contains(pattern)) return false;
 
 		int size = inventory.getSizeInventory();
 		List<ItemStack> items = new ArrayList<>(size);
@@ -193,7 +193,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	@Override
 	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
 		super.clearMachineInventory(itemBuffer);
-		clearInventory(itemBuffer, patternInventory);
+		clearInventory(itemBuffer, patternHandler);
 	}
 
 	@Override
@@ -201,7 +201,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 		super.writeInitialSyncData(buf);
 		buf.writeBoolean(workingEnabled);
 		buf.writeBoolean(autoCollapse);
-		buf.writeCompoundTag(patternInventory.serializeNBT());
+		buf.writeCompoundTag(patternHandler.serializeNBT());
 	}
 
 	@Override
@@ -216,7 +216,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 		super.writeToNBT(data);
 		data.setBoolean("WorkingEnabled", workingEnabled);
 		data.setBoolean("AutoCollapse", autoCollapse);
-		data.setTag("PatternInventory", this.patternInventory.serializeNBT());
+		data.setTag("PatternInventory", this.patternHandler.serializeNBT());
 		this.circuitInventory.write(data);
 		return data;
 	}
@@ -231,7 +231,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 			this.autoCollapse = data.getBoolean("AutoCollapse");
 		}
 		if (data.hasKey("PatternInventory")) {
-			this.patternInventory.deserializeNBT(data.getCompoundTag("PatternInventory"));
+			this.patternHandler.deserializeNBT(data.getCompoundTag("PatternInventory"));
 		}
 		if (this.circuitInventory != null) {
 			this.circuitInventory.read(data);
@@ -314,7 +314,12 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 								.top(18)
 								.background(GTGuiTextures.SLOT, GTGuiTextures.INT_CIRCUIT_OVERLAY))
 						.child(new ItemSlot()
-								.slot(patternInventory, 0)
+								.slot(SyncHandlers.itemSlot(patternHandler, 0)
+										.changeListener((newItem, onlyAmountChanged, client, init) -> {
+											if (onlyAmountChanged) {
+												patternHandler.onContentsChanged(0);
+											}
+										}))
 								.horizontalCenter()
 								.background(
 										GTGuiTextures.SLOT,
@@ -429,7 +434,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	private class SinglePatternHandler extends AbstractPatternItemHandler {
 
 		public SinglePatternHandler() {
-			super(1);
+			super(MTEMEPatternProvider.this, 1);
 		}
 
 		@Override

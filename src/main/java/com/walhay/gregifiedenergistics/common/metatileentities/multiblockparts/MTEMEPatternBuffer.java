@@ -23,6 +23,7 @@ import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.value.sync.DynamicSyncHandler;
 import com.cleanroommc.modularui.value.sync.ItemSlotSH;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.value.sync.SyncHandlers;
 import com.cleanroommc.modularui.widgets.DynamicSyncedWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -178,12 +179,14 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 	@Override
 	public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager panelSyncManager, UISettings settings) {
+		panelSyncManager.registerSlotGroup("pattern_inv", 9);
 		for (var container : patternHandler.containers) {
 			container.dsh = new DynamicSyncHandler();
 		}
 
 		return GTGuis.createPanel(this, 176, 200)
 				.child(SlotGroupWidget.builder()
+						.slotGroup("pattern_inv")
 						.matrix("IIIIIIIII", "IIIIIIIII", "IIIIIIIII", "IIIIIIIII")
 						.key(
 								'I',
@@ -204,7 +207,12 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 										}
 										return super.onKeyPressed(typedChar, keyCode);
 									}
-								}.slot(patternHandler, index)
+								}.slot(SyncHandlers.itemSlot(patternHandler, index)
+												.changeListener((newItem, onlyAmountChanged, client, init) -> {
+													if (onlyAmountChanged) {
+														patternHandler.onContentsChanged(index);
+													}
+												}))
 										.tooltipBuilder(rt ->
 												rt.addLine(IKey.lang("gregifiedenergistics.gui.buffer_contents_open")))
 										.background(
@@ -259,7 +267,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		private final Object2ObjectOpenHashMap<ICraftingPatternDetails, PatternContainer> patternToContainer;
 
 		public PatternHandler(int size) {
-			super(size);
+			super(MTEMEPatternBuffer.this, size);
 			this.containers = new PatternContainer[size];
 			for (int i = 0; i < size; ++i) {
 				this.containers[i] = new PatternContainer(i);
@@ -323,7 +331,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		}
 
 		@Override
-		protected void onContentsChanged(int slot) {
+		public void onContentsChanged(int slot) {
 			var previous = getPatternDetails(slot);
 			super.onContentsChanged(slot);
 			var current = getPatternDetails(slot);

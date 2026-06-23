@@ -7,6 +7,7 @@ import appeng.items.misc.ItemEncodedPattern;
 import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.value.sync.PanelSyncManager;
+import com.cleanroommc.modularui.value.sync.SyncHandlers;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
 import com.cleanroommc.modularui.widgets.layout.Flow;
@@ -58,6 +59,7 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 	@Override
 	public Widget<?> createPatternList(ModularPanel panel, PanelSyncManager syncHandler) {
 		panel.child(SlotGroupWidget.playerInventory(false).left(7).bottom(7));
+		syncHandler.registerSlotGroup("item_inv", 4);
 
 		return Flow.column()
 				.name("pattern list")
@@ -66,12 +68,18 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 				.coverChildrenHeight()
 				.child(IKey.lang("gregifiedenergistics.gui.pattern_list").asWidget())
 				.child(SlotGroupWidget.builder()
+						.slotGroup("item_inv")
 						.row("IIII")
 						.row("IIII")
 						.row("IIII")
 						.row("IIII")
 						.key('I', index -> new ItemSlot()
-								.slot(patternHandler, index)
+								.slot(SyncHandlers.itemSlot(patternHandler, index)
+										.changeListener((newItem, onlyAmountChanged, client, init) -> {
+											if (onlyAmountChanged) {
+												patternHandler.onContentsChanged(index);
+											}
+										}))
 								.background(
 										GTGuiTextures.SLOT,
 										GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY
@@ -129,7 +137,7 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 	class DataStickHandler extends AbstractPatternItemHandler {
 
 		public DataStickHandler(int size) {
-			super(size);
+			super(MTEMEAssemblyLineBus.this, size);
 		}
 
 		@Override
