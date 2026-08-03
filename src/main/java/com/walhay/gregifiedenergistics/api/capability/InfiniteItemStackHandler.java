@@ -22,6 +22,13 @@ public class InfiniteItemStackHandler extends ItemStackHandler {
 	}
 
 	@Override
+	public ItemStack getStackInSlot(int slot) {
+		if (getSlots() == 0) return ItemStack.EMPTY;
+
+		return this.stacks.get(slot);
+	}
+
+	@Override
 	public ItemStack extractItem(int slot, int amount, boolean simulate) {
 		if (amount == 0) {
 			return ItemStack.EMPTY;

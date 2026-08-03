@@ -7,6 +7,7 @@ import gregtech.api.capability.impl.ItemHandlerList;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
+import net.minecraft.item.ItemStack;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,6 +26,19 @@ public class PatternBufferDualHandler extends DualHandler {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	@Override
+	public int getSlots() {
+		if (itemDelegate == null) return 0;
+		return super.getSlots();
+	}
+
+	@Override
+	public @NotNull ItemStack getStackInSlot(int slot) {
+		if (getSlots() == 0) return ItemStack.EMPTY;
+
+		return super.getStackInSlot(slot);
 	}
 
 	public PatternBufferDualHandler(
