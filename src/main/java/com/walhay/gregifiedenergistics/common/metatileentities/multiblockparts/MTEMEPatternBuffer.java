@@ -57,6 +57,7 @@ import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
 import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.mui.GTGuis.PopupPanel;
+import gregtech.api.mui.widget.GhostCircuitSlotWidget;
 import gregtech.api.util.GTTransferUtils;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.ArrayList;
@@ -602,13 +603,13 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			int slots = buffer.readInt();
 			int fluids = buffer.readInt();
 
-			Flow row = Flow.row().childPadding(8);
+			Flow row = Flow.row().childPadding(18);
 
 			if (slots > 0) {
 				row.child(new Grid()
 						.minColWidth(18)
 						.minRowHeight(18)
-						.width(18 * 6)
+						.width(18 * 3)
 						.coverChildrenHeight()
 						.mapTo(6, slots, slotIndex -> {
 							ModularSlot ms = new DynamicItemSlot(itemInventory, slotIndex);
@@ -624,7 +625,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				row.child(new Grid()
 						.minColWidth(18)
 						.minRowHeight(18)
-						.width(18 * 6)
+						.width(18 * 3)
 						.coverChildrenHeight()
 						.mapTo(6, fluidInventory.getFluidTanks(), (fluidIndex, tank) -> {
 							FluidSlotSyncHandler fsh = syncManager.getOrCreateSyncHandler(
@@ -637,7 +638,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 						}));
 			}
 
-			return row;
+			return row.coverChildren();
 		}
 
 		public PopupPanel buildUI(PanelSyncManager syncManager, int index) {
@@ -645,7 +646,11 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			this.dsh.notifyUpdate(buf -> buf.writeInt(itemInventory.getSlots()).writeInt(fluidInventory.getTanks()));
 
 			return (PopupPanel) GTGuis.createPopupPanel("buffer#" + index, 180, 140)
-					.child(new DynamicSyncedWidget<>().pos(6, 6).syncHandler(this.dsh));
+					.child(new DynamicSyncedWidget<>().pos(6, 6).syncHandler(this.dsh))
+					.child(new GhostCircuitSlotWidget()
+							.slot(circuitInventory, 0)
+							.top(6)
+							.right(7));
 		}
 	}
 }
