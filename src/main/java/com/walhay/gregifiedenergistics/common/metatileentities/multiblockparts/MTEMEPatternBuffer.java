@@ -40,6 +40,7 @@ import com.walhay.gregifiedenergistics.api.capability.InfiniteItemStackHandler;
 import com.walhay.gregifiedenergistics.api.capability.PatternBufferDualHandler;
 import com.walhay.gregifiedenergistics.api.capability.SegmentItemHandlerList;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
+import com.walhay.gregifiedenergistics.api.mui.DynamicItemSlot;
 import com.walhay.gregifiedenergistics.api.mui.GregifiedEnergisticsGuiTextures;
 import com.walhay.gregifiedenergistics.api.patterns.implementations.GhostCircuitPatternWrapper;
 import com.walhay.gregifiedenergistics.api.util.FluidCraftingUtils;
@@ -601,15 +602,16 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			int slots = buffer.readInt();
 			int fluids = buffer.readInt();
 
-			Flow row = Flow.row();
+			Flow row = Flow.row().childPadding(8);
 
 			if (slots > 0) {
 				row.child(new Grid()
 						.minColWidth(18)
 						.minRowHeight(18)
-						.coverChildren()
+						.width(18 * 6)
+						.coverChildrenHeight()
 						.mapTo(6, slots, slotIndex -> {
-							ModularSlot ms = new ModularSlot(itemInventory, slotIndex);
+							ModularSlot ms = new DynamicItemSlot(itemInventory, slotIndex);
 
 							ItemSlotSH itemSyncHandler = syncManager.getOrCreateSyncHandler(
 									"buffer_slot", slotIndex, ItemSlotSH.class, () -> new ItemSlotSH(ms));
@@ -622,7 +624,8 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				row.child(new Grid()
 						.minColWidth(18)
 						.minRowHeight(18)
-						.coverChildren()
+						.width(18 * 6)
+						.coverChildrenHeight()
 						.mapTo(6, fluidInventory.getFluidTanks(), (fluidIndex, tank) -> {
 							FluidSlotSyncHandler fsh = syncManager.getOrCreateSyncHandler(
 									"fluid_slot",
