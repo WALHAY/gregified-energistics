@@ -52,13 +52,14 @@ public class MTEMEAssemblyLineOpticalBus extends MTEAbstractAssemblyLineBus impl
 	@Override
 	public void addInformation(ItemStack stack, World world, @NotNull List<String> tooltip, boolean advanced) {
 		super.addInformation(stack, world, tooltip, advanced);
+		tooltip.add(I18n.format("gregifiedenergistics.machine.me_assembly_line_optical_bus.tooltip"));
 		tooltip.add(I18n.format("gregifiedenergistics.machine.me_assembly_line_optical_bus.optical_pipe"));
 	}
 
 	@Override
 	public void addToolUsages(ItemStack stack, World world, List<String> tooltip, boolean advanced) {
 		super.addToolUsages(stack, world, tooltip, advanced);
-		tooltip.add(I18n.format("gregifiedenergistics.tool_action.screwdriwer.optical_facing"));
+		tooltip.add(I18n.format("gregifiedenergistics.tool_action.screwdriver.optical_facing"));
 	}
 
 	@Override

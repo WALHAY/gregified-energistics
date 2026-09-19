@@ -185,6 +185,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 					.addTooltipLine(IKey.lang("gregtech.machine.workbench.tab.item_list"))
 					.addTooltipLine(
 							IKey.lang("gregtech.machine.workbench.storage_note").style(TextFormatting.DARK_GRAY))
+					.addTooltipLine(IKey.lang("gregifiedenergistics.gui.substitutions_grid"))
 					.overlay(new ItemDrawable(AEApi.instance()
 									.definitions()
 									.items()
@@ -256,7 +257,10 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 						.stateOverlay(0, BLOCKING_MODE[0])
 						.stateOverlay(1, BLOCKING_MODE[1])
 						.stateOverlay(2, BLOCKING_MODE[2]))
-				.child(new ItemSlot().slot(importItems, 0).size(18));
+				.child(new ItemSlot()
+						.slot(importItems, 0)
+						.size(18)
+						.tooltip(rt -> rt.addLine(IKey.lang("gregifiedenergistics.gui.item_slot"))));
 	}
 
 	public Widget<?> createPatternList(ModularPanel panel, PanelSyncManager syncHandler) {

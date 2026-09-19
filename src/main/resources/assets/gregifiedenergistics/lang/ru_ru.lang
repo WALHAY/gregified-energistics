@@ -1,39 +1,48 @@
-gregifiedenergistics.machine.me_assembly_line_bus.name=ME Шина Сборочной Линии
-gregifiedenergistics.machine.me_assembly_line_bus.tooltip=Разместите этот блок вместо первой входной шины сборочной линии
-gregifiedenergistics.machine.me_assembly_line_bus.datastick=Может использовать флешки с закодированными шаблонами
-gregifiedenergistics.machine.me_assembly_line_bus.pattern_slots=Каждый слот шаблона отвечает за соответствующую шину сборочной линии
-gregifiedenergistics.machine.me_assembly_line_bus.fluid_mode=Использование жидкостей работает только с флешками
+gregifiedenergistics.machine.me_assembly_line_bus.name=ME-шина сборочной линии
+gregifiedenergistics.machine.me_assembly_line_bus.tooltip=Заменяет первую входную шину сборочной линии и получает рецепты из ME-сети.
+gregifiedenergistics.machine.me_assembly_line_bus.datastick=Принимает флешки данных и шаблоны AE2 как источники рецептов.
+gregifiedenergistics.machine.me_assembly_line_bus.pattern_slots=Каждый слот шаблонов соответствует одноимённому входному слоту сборочной линии.
+gregifiedenergistics.machine.me_assembly_line_bus.fluid_mode=Жидкостные входы поддерживаются для рецептов с флешек данных.
 
-gregifiedenergistics.machine.me_assembly_line_optical_bus.name=ME Оптическая Шина Сборочной Линии
-gregifiedenergistics.machine.me_assembly_line_optical_bus.tooltip=Разместите этот блок вместо первой входной шины сборочной линии
-gregifiedenergistics.machine.me_assembly_line_optical_bus.optical_pipe=Присоединяется к банку данных с помощью оптической трубы
+gregifiedenergistics.machine.me_assembly_line_optical_bus.name=ME-оптическая шина сборочной линии
+gregifiedenergistics.machine.me_assembly_line_optical_bus.tooltip=Заменяет первую входную шину сборочной линии и получает рецепты из оптической сети.
+gregifiedenergistics.machine.me_assembly_line_optical_bus.optical_pipe=Подключите оптическую сторону к банку данных оптической трубой, чтобы получать рецепты сборочной линии.
 
-gregifiedenergistics.gui.no_blocking=Режим Блокировки Отключен
-gregifiedenergistics.gui.blocking_mode=Режим Блокировки
-gregifiedenergistics.gui.crafting_blocking_mode=Режим Блокировки При Крафте
+gregifiedenergistics.machine.me_pattern_buffer.name=ME-буфер шаблонов
+gregifiedenergistics.machine.me_pattern_buffer.tooltip=Хранит до 36 закодированных шаблонов и их входы для многоблочной сборочной линии.
+gregifiedenergistics.machine.me_pattern_provider.tooltip=Передаёт один закодированный шаблон в ME-сеть и выводит его входы в многоблочную структуру.
+gregifiedenergistics.machine.me_pattern_provider_iv.name=ME-провайдер шаблонов (IV)
+gregifiedenergistics.machine.me_pattern_provider_luv.name=ME-провайдер шаблонов (LuV)
+gregifiedenergistics.machine.me_pattern_provider_zpm.name=ME-провайдер шаблонов (ZPM)
+gregifiedenergistics.machine.me_pattern_provider_uv.name=ME-провайдер шаблонов (UV)
+gregifiedenergistics.machine.me_pattern_provider_uhv.name=ME-провайдер шаблонов (UHV)
 
-gregifiedenergistics.gui.fluid_mode.enabled=Использовать жидкость
-gregifiedenergistics.gui.fluid_mode.disabled=Не использовать жидкость
-gregifiedenergistics.gui.working.enabled=Машина включена
-gregifiedenergistics.gui.working.disabled=Машина выключена
+gregifiedenergistics.gui.no_blocking=Блокировка: отключена
+gregifiedenergistics.gui.blocking_mode=Блокировка: включена
+gregifiedenergistics.gui.crafting_blocking_mode=Блокировка: только во время крафта
 
-gregifiedenergistics.gui.item_slot=Входной Слот
+gregifiedenergistics.gui.fluid_mode.enabled=Жидкостные входы: включены
+gregifiedenergistics.gui.fluid_mode.disabled=Жидкостные входы: отключены
+gregifiedenergistics.gui.working.enabled=Машина: включена
+gregifiedenergistics.gui.working.disabled=Машина: отключена
 
-gregifiedenergistics.gui.substitutions_grid=Замены
-gregifiedenergistics.gui.patterns_grid=Шаблоны
+gregifiedenergistics.gui.item_slot=Входной слот сборочной линии
 
-gregifiedenergistics.tool_action.memory_card.copy_substitution=§8Используйте отвертку, чтобы сохранить и вставить Данные замен
-gregifiedenergistics.tool_action.screwdriwer.optical_facing=§8Используйте отвертку, чтобы повернуть оптический вход
+gregifiedenergistics.gui.substitutions_grid=Варианты замены
+gregifiedenergistics.gui.patterns_grid=Сохранённые шаблоны
 
-gregifiedenergistics.machine.me.import_copy_settings=Настройки сохранены на Карту данных
-gregifiedenergistics.machine.me.import_paste_settings=Настройки из Карты данных применены
+gregifiedenergistics.tool_action.memory_card.copy_substitution=§8Используйте карту памяти в приседе, чтобы скопировать замены; нажмите ПКМ для вставки
+gregifiedenergistics.tool_action.screwdriver.optical_facing=§8Используйте отвёртку, чтобы изменить сторону оптического подключения
 
-gregifiedenergistics.gui.substitution=Замены
-gregifiedenergistics.gui.substitution_list=Список Замен
-gregifiedenergistics.gui.pattern_list=Шаблоны
+gregifiedenergistics.machine.me.copy_settings=Настройки замен скопированы на карту памяти.
+gregifiedenergistics.machine.me.paste_settings=Настройки замен загружены с карты памяти.
 
-gregifiedenergistics.gui.buffer_contents=Буфер #%d
+gregifiedenergistics.gui.substitution=Замена
+gregifiedenergistics.gui.substitution_list=Список замен
+gregifiedenergistics.gui.pattern_list=Шаблоны сборочной линии
+
+gregifiedenergistics.gui.buffer_contents=Содержимое буфера №%d
 gregifiedenergistics.gui.buffer_items=Предметы
 gregifiedenergistics.gui.buffer_fluids=Жидкости
-gregifiedenergistics.gui.buffer_empty=Нет входов
-gregifiedenergistics.gui.substitution_hint=Нажмите или прокрутите для смены; Shift-нажатие для выбора
+gregifiedenergistics.gui.buffer_empty=Входы не сохранены
+gregifiedenergistics.gui.substitution_hint=Нажмите или прокрутите для смены; Shift-нажатие выбирает замену

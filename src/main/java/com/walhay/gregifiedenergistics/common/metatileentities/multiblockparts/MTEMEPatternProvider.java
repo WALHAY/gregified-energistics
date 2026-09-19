@@ -421,6 +421,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	@Override
 	public void addInformation(
 			ItemStack stack, @Nullable World player, @NotNull List<String> tooltip, boolean advanced) {
+		tooltip.add(I18n.format("gregifiedenergistics.machine.me_pattern_provider.tooltip"));
 		tooltip.add(I18n.format("gregtech.machine.item_bus.import.tooltip"));
 		tooltip.add(I18n.format("gregtech.universal.tooltip.item_storage_capacity", getInventorySize()));
 		tooltip.add(I18n.format("gregtech.universal.enabled"));

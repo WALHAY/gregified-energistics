@@ -1,39 +1,48 @@
 gregifiedenergistics.machine.me_assembly_line_bus.name=ME Assembly Line Bus
-gregifiedenergistics.machine.me_assembly_line_bus.tooltip=Place this block instead of first Assembly line Input bus
-gregifiedenergistics.machine.me_assembly_line_bus.datastick=Can use Data sticks to provide recipes
-gregifiedenergistics.machine.me_assembly_line_bus.pattern_slots=In pattern each slot relies to same Input bus of Assembly line
-gregifiedenergistics.machine.me_assembly_line_bus.fluid_mode=Fluid mode working only with Data sticks
+gregifiedenergistics.machine.me_assembly_line_bus.tooltip=Replaces the first Assembly Line input bus and imports recipes from your ME network.
+gregifiedenergistics.machine.me_assembly_line_bus.datastick=Accepts encoded Data Sticks and AE2 crafting patterns as recipe sources.
+gregifiedenergistics.machine.me_assembly_line_bus.pattern_slots=Each pattern slot maps to the matching Assembly Line input bus slot.
+gregifiedenergistics.machine.me_assembly_line_bus.fluid_mode=Fluid inputs are supported when recipes come from encoded Data Sticks.
 
 gregifiedenergistics.machine.me_assembly_line_optical_bus.name=ME Assembly Line Optical Bus
-gregifiedenergistics.machine.me_assembly_line_optical_bus.tooltip=Place this block instead of first Assembly line Input bus
-gregifiedenergistics.machine.me_assembly_line_optical_bus.optical_pipe=Connect to Data bank using optical pipe to provide recipes
+gregifiedenergistics.machine.me_assembly_line_optical_bus.tooltip=Replaces the first Assembly Line input bus and reads recipes from a connected optical network.
+gregifiedenergistics.machine.me_assembly_line_optical_bus.optical_pipe=Connect the optical side to a Data Bank with an optical pipe to import Assembly Line recipes.
 
-gregifiedenergistics.gui.no_blocking=No Blocking
-gregifiedenergistics.gui.blocking_mode=Blocking Mode
-gregifiedenergistics.gui.crafting_blocking_mode=Crafting Blocking Mode
+gregifiedenergistics.machine.me_pattern_buffer.name=ME Pattern Buffer
+gregifiedenergistics.machine.me_pattern_buffer.tooltip=Stores up to 36 encoded patterns and their inputs for an Assembly Line multiblock.
+gregifiedenergistics.machine.me_pattern_provider.tooltip=Provides one encoded pattern to the ME network and exports its inputs to the multiblock.
+gregifiedenergistics.machine.me_pattern_provider_iv.name=ME Pattern Provider (IV)
+gregifiedenergistics.machine.me_pattern_provider_luv.name=ME Pattern Provider (LuV)
+gregifiedenergistics.machine.me_pattern_provider_zpm.name=ME Pattern Provider (ZPM)
+gregifiedenergistics.machine.me_pattern_provider_uv.name=ME Pattern Provider (UV)
+gregifiedenergistics.machine.me_pattern_provider_uhv.name=ME Pattern Provider (UHV)
 
-gregifiedenergistics.gui.fluid_mode.enabled=Fluid Mode: Enabled
-gregifiedenergistics.gui.fluid_mode.disabled=Fluid Mode: Disabled
-gregifiedenergistics.gui.working.enabled=Machine Enabled
-gregifiedenergistics.gui.working.disabled=Machine Disabled
+gregifiedenergistics.gui.no_blocking=Blocking: Disabled
+gregifiedenergistics.gui.blocking_mode=Blocking: Enabled
+gregifiedenergistics.gui.crafting_blocking_mode=Blocking: Crafting Only
 
-gregifiedenergistics.gui.item_slot=Input Item Slot
+gregifiedenergistics.gui.fluid_mode.enabled=Fluid inputs: Enabled
+gregifiedenergistics.gui.fluid_mode.disabled=Fluid inputs: Disabled
+gregifiedenergistics.gui.working.enabled=Machine: Enabled
+gregifiedenergistics.gui.working.disabled=Machine: Disabled
 
-gregifiedenergistics.gui.substitutions_grid=Substitutions
-gregifiedenergistics.gui.patterns_grid=Patterns
+gregifiedenergistics.gui.item_slot=Assembly Line input slot
 
-gregifiedenergistics.tool_action.memory_card.copy_substitution=§8Use Memory card to copy and paste Substitution data
-gregifiedenergistics.tool_action.screwdriwer.optical_facing=§8Use Screwdriwer to change Optical facing
+gregifiedenergistics.gui.substitutions_grid=Substitution choices
+gregifiedenergistics.gui.patterns_grid=Stored patterns
 
-gregifiedenergistics.machine.me.copy_settings=Saved settings to Memory Card
-gregifiedenergistics.machine.me.paste_settings=Applied settings from Memory Card
+gregifiedenergistics.tool_action.memory_card.copy_substitution=§8Use a Memory Card while sneaking to copy substitutions; right-click to paste them
+gregifiedenergistics.tool_action.screwdriver.optical_facing=§8Use a screwdriver to change the optical connection side
 
-gregifiedenergistics.gui.substitution=Substitutions
-gregifiedenergistics.gui.substitution_list=List of Substitutions
-gregifiedenergistics.gui.pattern_list=Patterns
+gregifiedenergistics.machine.me.copy_settings=Substitution settings copied to the Memory Card.
+gregifiedenergistics.machine.me.paste_settings=Substitution settings loaded from the Memory Card.
 
-gregifiedenergistics.gui.buffer_contents=Buffer #%d
+gregifiedenergistics.gui.substitution=Substitution
+gregifiedenergistics.gui.substitution_list=Substitution list
+gregifiedenergistics.gui.pattern_list=Assembly Line patterns
+
+gregifiedenergistics.gui.buffer_contents=Buffer #%d contents
 gregifiedenergistics.gui.buffer_items=Items
 gregifiedenergistics.gui.buffer_fluids=Fluids
-gregifiedenergistics.gui.buffer_empty=No inputs
-gregifiedenergistics.gui.substitution_hint=Left/right click or scroll to change; Shift-click to choose
+gregifiedenergistics.gui.buffer_empty=No inputs stored
+gregifiedenergistics.gui.substitution_hint=Click or scroll to cycle; Shift-click to choose a substitution

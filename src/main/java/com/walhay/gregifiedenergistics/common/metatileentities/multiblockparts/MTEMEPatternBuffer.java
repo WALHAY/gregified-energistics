@@ -67,6 +67,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.minecraft.block.Block;
+import net.minecraft.init.Items;
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -237,8 +238,10 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 										for (int i = 0;
 												i < container.inventory().getSlots();
 												++i) {
-											tooltip.addFromItem(
-													container.inventory().getStackInSlot(i));
+											var item = container.inventory().getStackInSlot(i);
+											if (item != null && item.getItem() != Items.AIR) {
+												tooltip.addFromItem(item);
+											}
 										}
 									}
 								}.slot(SyncHandlers.itemSlot(patternHandler, index)
