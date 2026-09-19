@@ -38,7 +38,6 @@ import com.glodblock.github.common.item.fake.FakeItemRegister;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
 import com.walhay.gregifiedenergistics.api.capability.InfiniteItemStackHandler;
 import com.walhay.gregifiedenergistics.api.capability.PatternBufferDualHandler;
-import com.walhay.gregifiedenergistics.api.capability.SegmentItemHandlerList;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
 import com.walhay.gregifiedenergistics.api.mui.DynamicItemSlot;
 import com.walhay.gregifiedenergistics.api.mui.GregifiedEnergisticsGuiTextures;
@@ -54,7 +53,6 @@ import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.MultiblockControllerBase;
-import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
 import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
 import gregtech.api.mui.GTGuis.PopupPanel;
@@ -107,23 +105,15 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	public void addToMultiBlock(MultiblockControllerBase controller) {
 		super.addToMultiBlock(controller);
 		for (var container : patternHandler) {
-			container.addNotifiableMetaTileEntity(controller);
+			container.notifyController(controller);
 		}
-		invalidateRecipeCache(controller);
 	}
 
 	@Override
 	public void removeFromMultiBlock(MultiblockControllerBase controller) {
 		super.removeFromMultiBlock(controller);
 		for (var container : patternHandler) {
-			container.removeNotifiableMetaTileEntity(controller);
-		}
-		invalidateRecipeCache(controller);
-	}
-
-	private void invalidateRecipeCache(MultiblockControllerBase controller) {
-		if (controller instanceof RecipeMapMultiblockController recipeController) {
-			recipeController.getRecipeMapWorkable().invalidate();
+			container.clearControllerNotifications(controller);
 		}
 	}
 
@@ -302,7 +292,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			super(MTEMEPatternBuffer.this, size);
 			this.containers = new PatternContainer[size];
 			for (int i = 0; i < size; ++i) {
-				this.containers[i] = new PatternContainer(i);
+				this.containers[i] = new PatternContainer();
 			}
 			this.patternToContainer = new Object2ObjectOpenHashMap<>(size);
 		}
@@ -442,15 +432,13 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 		private DynamicSyncHandler dsh;
 
-		public PatternContainer(int index) {
+		public PatternContainer() {
 			this.dsh = new DynamicSyncHandler();
 			this.itemInventory = new InfiniteItemStackHandler(0) {
 				@Override
 				protected void onContentsChanged(int slot) {
 					super.onContentsChanged(slot);
-					if (PatternContainer.this.dualHandler != null) {
-						PatternContainer.this.dualHandler.onContentsChanged();
-					}
+					PatternContainer.this.dualHandler.onContentsChanged();
 				}
 			};
 
@@ -469,13 +457,11 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			this.circuitInventory.addNotifiableMetaTileEntity(MTEMEPatternBuffer.this);
 		}
 
-		private void addNotifiableMetaTileEntity(MultiblockControllerBase controller) {
-			this.dualHandler.addNotifiableMetaTileEntity(controller);
+		private void notifyController(MultiblockControllerBase controller) {
 			this.dualHandler.addToNotifiedList(controller, this.dualHandler, false);
 		}
 
-		private void removeNotifiableMetaTileEntity(MultiblockControllerBase controller) {
-			this.dualHandler.removeNotifiableMetaTileEntity(controller);
+		private void clearControllerNotifications(MultiblockControllerBase controller) {
 			controller.getNotifiedItemInputList().remove(this.dualHandler);
 			controller.getNotifiedFluidInputList().remove(this.dualHandler);
 		}
@@ -501,12 +487,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			this.itemInventory.setSize(items);
 			this.dualHandler.onResize();
 
-			if (getController() instanceof RecipeMapMultiblockController controller) {
-				if (controller.getInputInventory() instanceof SegmentItemHandlerList seg) {
-					seg.onHandlerChange(dualHandler);
-				}
-			}
-
 			List<FluidTank> fluidTanks = new ArrayList<>(fluids);
 			for (int i = 0; i < fluids; ++i) {
 				fluidTanks.add(new FluidTank(Integer.MAX_VALUE) {
@@ -523,14 +503,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			this.dualHandler.onContentsChanged();
 
 			this.dsh.notifyUpdate(buf -> buf.writeInt(itemInventory.getSlots()).writeInt(fluidInventory.getTanks()));
-		}
-
-		@Nullable public ICraftingPatternDetails getPattern() {
-			return pattern;
-		}
-
-		public IMultipleTankHandler fluidInventory() {
-			return fluidInventory;
 		}
 
 		public IItemHandlerModifiable inventory() {

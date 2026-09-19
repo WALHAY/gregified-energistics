@@ -54,14 +54,9 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 		refreshHandlerSizes();
 	}
 
-	public void onHandlerChange(IItemHandlerModifiable handler) {
-		if (handlers.contains(handler)) refreshHandlerSizes();
-	}
-
 	/**
-	 * Item handlers used by the pattern buffer can change their slot count after this list is created. Keep the cached
-	 * prefix in sync even when the resize happened during deserialization or before the explicit resize callback was
-	 * installed.
+	 * Item handlers used by the pattern buffer can change their slot count after this list is created. Rebuild the
+	 * cached prefix before each operation so the aggregate always reflects the current handler sizes.
 	 */
 	private void refreshHandlerSizes() {
 		int total = 0;

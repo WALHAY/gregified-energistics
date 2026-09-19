@@ -29,11 +29,6 @@ public class PatternBufferDualHandler extends DualHandler {
 	}
 
 	@Override
-	public int getSlots() {
-		return super.getSlots();
-	}
-
-	@Override
 	public @NotNull ItemStack getStackInSlot(int slot) {
 		if (slot < 0 || slot >= getSlots()) return ItemStack.EMPTY;
 
@@ -63,7 +58,7 @@ public class PatternBufferDualHandler extends DualHandler {
 				unwrapped.add(entry instanceof DualEntry dualEntry ? dualEntry : new DualEntry(this, entry));
 			}
 		} catch (Exception e) {
-			new RuntimeException(e);
+			throw new RuntimeException(e);
 		}
 	}
 
