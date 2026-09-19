@@ -14,6 +14,8 @@ gregifiedenergistics.gui.crafting_blocking_mode=Crafting Blocking Mode
 
 gregifiedenergistics.gui.fluid_mode.enabled=Fluid Mode: Enabled
 gregifiedenergistics.gui.fluid_mode.disabled=Fluid Mode: Disabled
+gregifiedenergistics.gui.working.enabled=Machine Enabled
+gregifiedenergistics.gui.working.disabled=Machine Disabled
 
 gregifiedenergistics.gui.item_slot=Input Item Slot
 
@@ -31,3 +33,7 @@ gregifiedenergistics.gui.substitution_list=List of Substitutions
 gregifiedenergistics.gui.pattern_list=Patterns
 
 gregifiedenergistics.gui.buffer_contents=Buffer #%d
+gregifiedenergistics.gui.buffer_items=Items
+gregifiedenergistics.gui.buffer_fluids=Fluids
+gregifiedenergistics.gui.buffer_empty=No inputs
+gregifiedenergistics.gui.substitution_hint=Left/right click or scroll to change; Shift-click to choose

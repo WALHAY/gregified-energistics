@@ -14,6 +14,8 @@ gregifiedenergistics.gui.crafting_blocking_mode=Режим Блокировки 
 
 gregifiedenergistics.gui.fluid_mode.enabled=Использовать жидкость
 gregifiedenergistics.gui.fluid_mode.disabled=Не использовать жидкость
+gregifiedenergistics.gui.working.enabled=Машина включена
+gregifiedenergistics.gui.working.disabled=Машина выключена
 
 gregifiedenergistics.gui.item_slot=Входной Слот
 
@@ -31,3 +33,7 @@ gregifiedenergistics.gui.substitution_list=Список Замен
 gregifiedenergistics.gui.pattern_list=Шаблоны
 
 gregifiedenergistics.gui.buffer_contents=Буфер #%d
+gregifiedenergistics.gui.buffer_items=Предметы
+gregifiedenergistics.gui.buffer_fluids=Жидкости
+gregifiedenergistics.gui.buffer_empty=Нет входов
+gregifiedenergistics.gui.substitution_hint=Нажмите или прокрутите для смены; Shift-нажатие для выбора

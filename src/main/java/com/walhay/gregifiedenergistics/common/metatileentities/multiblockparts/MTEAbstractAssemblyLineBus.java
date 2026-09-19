@@ -226,15 +226,32 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 						.overlay(true, detail, GTGuiTextures.BUTTON_POWER[1])
 						.overlay(false, detail, GTGuiTextures.BUTTON_POWER[0])
 						.value(workingStateValue)
+						.tooltipAutoUpdate(true)
+						.tooltipBuilder(t -> t.addLine(IKey.lang(
+								workingStateValue.getBoolValue()
+										? "gregifiedenergistics.gui.working.enabled"
+										: "gregifiedenergistics.gui.working.disabled")))
 						.marginTop(4)
 						.top(18 * 3 + 5))
 				.child(new ToggleButton()
 						.value(fluidStateValue)
+						.tooltipAutoUpdate(true)
+						.tooltipBuilder(t -> t.addLine(IKey.lang(
+								fluidStateValue.getBoolValue()
+										? "gregifiedenergistics.gui.fluid_mode.enabled"
+										: "gregifiedenergistics.gui.fluid_mode.disabled")))
 						.top(18 * 2)
 						.overlay(false, new ItemDrawable(Items.BUCKET))
 						.overlay(true, new ItemDrawable(Items.WATER_BUCKET)))
 				.child(new CycleButtonWidget()
 						.value(blockingStateValue)
+						.tooltipAutoUpdate(true)
+						.tooltipBuilder(t -> t.addLine(IKey.lang(
+								switch (blockingStateValue.getValue()) {
+									case NO_BLOCKING -> "gregifiedenergistics.gui.no_blocking";
+									case BLOCKING_MODE -> "gregifiedenergistics.gui.blocking_mode";
+									case CRAFTING_BLOCKING_MODE -> "gregifiedenergistics.gui.crafting_blocking_mode";
+								})))
 						.top(18)
 						.stateOverlay(0, BLOCKING_MODE[0])
 						.stateOverlay(1, BLOCKING_MODE[1])

@@ -52,7 +52,10 @@ public class SubstitutionSlotWidget extends Widget<SubstitutionSlotWidget> imple
 	@Override
 	public void onInit() {
 		tooltip().setAutoUpdate(true);
-		tooltip().tooltipBuilder(rt -> rt.addFromItem(items.get(syncHandler.getOption())));
+		tooltip().tooltipBuilder(rt -> {
+			rt.addFromItem(items.get(syncHandler.getOption()));
+			rt.addLine(IKey.lang("gregifiedenergistics.gui.substitution_hint"));
+		});
 	}
 
 	@Override
@@ -109,6 +112,10 @@ public class SubstitutionSlotWidget extends Widget<SubstitutionSlotWidget> imple
 
 	@Override
 	public @NotNull Result onMousePressed(int mouseButton) {
+		// Input can arrive during the parent screen's closing animation. Do not open or
+		// close a cached secondary panel after its parent has been detached.
+		if (getPanel() == null || !getPanel().isOpen()) return Result.ACCEPT;
+
 		if (mouseButton == 0 && TooltipHelper.isShiftDown()) {
 			selectorPanel().togglePanel();
 		} else {

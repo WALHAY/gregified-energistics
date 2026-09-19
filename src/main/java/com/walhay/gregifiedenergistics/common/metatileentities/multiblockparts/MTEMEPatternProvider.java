@@ -298,6 +298,11 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 								.overlay(true, detail, GTGuiTextures.BUTTON_POWER[1])
 								.overlay(false, detail, GTGuiTextures.BUTTON_POWER[0])
 								.value(workingStateValue)
+								.tooltipAutoUpdate(true)
+								.tooltipBuilder(t -> t.addLine(IKey.lang(
+										workingStateValue.getBoolValue()
+												? "gregifiedenergistics.gui.working.enabled"
+												: "gregifiedenergistics.gui.working.disabled")))
 								.marginTop(4)
 								.top(18 * 3 + 5))
 						.child(new ToggleButton()

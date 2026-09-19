@@ -16,10 +16,12 @@ import appeng.fluids.util.AEFluidStack;
 import appeng.items.misc.ItemEncodedPattern;
 import appeng.util.item.AEItemStack;
 import com.cleanroommc.modularui.api.IPanelHandler;
+import com.cleanroommc.modularui.api.drawable.IKey;
 import com.cleanroommc.modularui.factory.PosGuiData;
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.UISettings;
+import com.cleanroommc.modularui.utils.Alignment;
 import com.cleanroommc.modularui.value.sync.DynamicSyncHandler;
 import com.cleanroommc.modularui.value.sync.FluidSlotSyncHandler;
 import com.cleanroommc.modularui.value.sync.ItemSlotSH;
@@ -199,7 +201,10 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager syncManager, UISettings settings) {
 		syncManager.registerSlotGroup("pattern_inv", 9);
 
-		return GTGuis.createPanel(this, 176, 166)
+		return GTGuis.createPanel(this, 176, 184)
+				.child(IKey.lang("gregifiedenergistics.gui.patterns_grid")
+						.asWidget()
+						.pos(5, 5))
 				.child(SlotGroupWidget.builder()
 						.slotGroup("pattern_inv")
 						.matrix("IIIIIIIII", "IIIIIIIII", "IIIIIIIII", "IIIIIIIII")
@@ -215,6 +220,8 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 									@Override
 									public @NotNull Result onKeyPressed(char typedChar, int keyCode) {
 										if (keyCode == Keyboard.KEY_B) {
+											if (getPanel() == null
+													|| !getPanel().isOpen()) return Result.ACCEPT;
 											panel.togglePanel();
 											return Result.SUCCESS;
 										}
@@ -243,8 +250,9 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 														.asIcon()
 														.size(16)))
 						.build()
+						.disableSortButtons()
 						.horizontalCenter()
-						.top(7))
+						.top(20))
 				.bindPlayerInventory();
 	}
 
@@ -431,6 +439,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		private FluidTankList fluidInventory;
 
 		private DynamicSyncHandler dsh;
+		private boolean initialUpdateSent;
 
 		public PatternContainer() {
 			this.dsh = new DynamicSyncHandler();
@@ -502,7 +511,8 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			this.dualHandler.setFluidDelegate(fluidInventory);
 			this.dualHandler.onContentsChanged();
 
-			this.dsh.notifyUpdate(buf -> buf.writeInt(itemInventory.getSlots()).writeInt(fluidInventory.getTanks()));
+			// The dynamic contents panel sends its dimensions when it is opened. Sending
+			// this update here would target buffer#N before that panel exists on the client.
 		}
 
 		public IItemHandlerModifiable inventory() {
@@ -627,54 +637,113 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			int slots = buffer.readInt();
 			int fluids = buffer.readInt();
 
-			Flow row = Flow.row().childPadding(18);
+			Flow row = Flow.row()
+					.childPadding(10)
+					.crossAxisAlignment(Alignment.CrossAxis.START)
+					.coverChildrenHeight()
+					.horizontalCenter();
 
 			if (slots > 0) {
-				row.child(new Grid()
-						.minColWidth(18)
-						.minRowHeight(18)
-						.width(18 * 3)
-						.coverChildrenHeight()
-						.mapTo(6, slots, slotIndex -> {
-							ModularSlot ms = new DynamicItemSlot(itemInventory, slotIndex);
+				row.child(Flow.column()
+						.coverChildren()
+						.child(IKey.lang("gregifiedenergistics.gui.buffer_items")
+								.asWidget())
+						.child(new Grid()
+								.minColWidth(18)
+								.minRowHeight(18)
+								.coverChildrenHeight()
+								.mapTo(4, slots, slotIndex -> {
+									ModularSlot ms = new DynamicItemSlot(itemInventory, slotIndex);
 
-							ItemSlotSH itemSyncHandler = syncManager.getOrCreateSyncHandler(
-									"buffer_slot", slotIndex, ItemSlotSH.class, () -> new ItemSlotSH(ms));
+									ItemSlotSH itemSyncHandler = syncManager.getOrCreateSyncHandler(
+											"buffer_slot", slotIndex, ItemSlotSH.class, () -> new ItemSlotSH(ms));
 
-							return new ItemSlot().syncHandler(itemSyncHandler).background(GTGuiTextures.SLOT);
-						}));
+									return new ItemSlot()
+											.syncHandler(itemSyncHandler)
+											.background(GTGuiTextures.SLOT);
+								})));
 			}
 
 			if (fluids > 0) {
-				row.child(new Grid()
-						.minColWidth(18)
-						.minRowHeight(18)
-						.width(18 * 3)
-						.coverChildrenHeight()
-						.mapTo(6, fluidInventory.getFluidTanks(), (fluidIndex, tank) -> {
-							FluidSlotSyncHandler fsh = syncManager.getOrCreateSyncHandler(
-									"fluid_slot",
-									fluidIndex,
-									FluidSlotSyncHandler.class,
-									() -> new FluidSlotSyncHandler(tank));
+				row.child(Flow.column()
+						.coverChildren()
+						.child(IKey.lang("gregifiedenergistics.gui.buffer_fluids")
+								.asWidget())
+						.child(new Grid()
+								.minColWidth(18)
+								.minRowHeight(18)
+								.coverChildrenHeight()
+								.mapTo(4, fluidInventory.getFluidTanks(), (fluidIndex, tank) -> {
+									FluidSlotSyncHandler fsh = syncManager.getOrCreateSyncHandler(
+											"fluid_slot",
+											fluidIndex,
+											FluidSlotSyncHandler.class,
+											() -> new FluidSlotSyncHandler(tank));
 
-							return new FluidSlot().syncHandler(fsh);
-						}));
+									return new FluidSlot().syncHandler(fsh);
+								})));
+			}
+
+			if (slots == 0 && fluids == 0) {
+				row.child(IKey.lang("gregifiedenergistics.gui.buffer_empty").asWidget());
 			}
 
 			return row.coverChildren();
 		}
 
+		private static int sectionWidth(int entries) {
+			return Math.max(64, Math.min(4, entries) * 18);
+		}
+
+		private static int sectionHeight(int entries) {
+			if (entries <= 0) return 0;
+			return 18 + ((entries + 3) / 4) * 18;
+		}
+
+		private static int contentWidth(int slots, int fluids) {
+			if (slots <= 0 && fluids <= 0) return 80;
+
+			int width = 0;
+			if (slots > 0) width += sectionWidth(slots);
+			if (fluids > 0) {
+				if (width > 0) width += 10;
+				width += sectionWidth(fluids);
+			}
+			return width;
+		}
+
+		private static int contentHeight(int slots, int fluids) {
+			return Math.max(18, Math.max(sectionHeight(slots), sectionHeight(fluids)));
+		}
+
 		public PopupPanel buildUI(PanelSyncManager syncManager, int index) {
 			this.dsh.widgetProvider(this::contentBuffer);
-			this.dsh.notifyUpdate(buf -> buf.writeInt(itemInventory.getSlots()).writeInt(fluidInventory.getTanks()));
+			this.initialUpdateSent = false;
+			syncManager.onServerTick(() -> {
+				if (!this.initialUpdateSent) {
+					this.initialUpdateSent = true;
+					this.dsh.notifyUpdate(
+							buf -> buf.writeInt(itemInventory.getSlots()).writeInt(fluidInventory.getTanks()));
+				}
+			});
+			int bodyWidth = contentWidth(itemInventory.getSlots(), fluidInventory.getTanks());
+			int bodyHeight = contentHeight(itemInventory.getSlots(), fluidInventory.getTanks());
+			int popupWidth = Math.max(104, bodyWidth + 14);
+			int popupHeight = Math.max(76, bodyHeight + 36);
 
-			return (PopupPanel) GTGuis.createPopupPanel("buffer#" + index, 180, 140)
-					.child(new DynamicSyncedWidget<>().pos(6, 6).syncHandler(this.dsh))
+			return (PopupPanel) GTGuis.createPopupPanel("buffer#" + index, popupWidth, popupHeight)
+					.child(IKey.lang("gregifiedenergistics.gui.buffer_contents", index + 1)
+							.asWidget()
+							.pos(7, 6))
+					.child(new DynamicSyncedWidget<>()
+							.pos(7, 28)
+							.size(bodyWidth, bodyHeight)
+							.syncHandler(this.dsh))
 					.child(new GhostCircuitSlotWidget()
 							.slot(circuitInventory, 0)
-							.top(6)
-							.right(7));
+							.top(5)
+							.right(27)
+							.background(GTGuiTextures.SLOT, GTGuiTextures.INT_CIRCUIT_OVERLAY));
 		}
 	}
 }
