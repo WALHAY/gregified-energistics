@@ -51,38 +51,49 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 		if (handlers.contains(handler)) return;
 
 		handlers.add(handler);
-		prefix.add(handler.getSlots() + (prefix.size() == 0 ? 0 : prefix.get(prefix.size() - 1)));
+		refreshHandlerSizes();
 	}
 
 	public void onHandlerChange(IItemHandlerModifiable handler) {
-		int index = handlers.indexOf(handler);
+		if (handlers.contains(handler)) refreshHandlerSizes();
+	}
 
-		if (index == -1) return;
-
-		int oldSize = prefix.get(index) - (index == 0 ? 0 : prefix.get(index - 1));
-		int diff = handler.getSlots() - oldSize;
-		if (diff == 0) return;
-
-		for (int i = index; i < prefix.size(); ++i) {
-			prefix.set(i, prefix.get(i) + diff);
+	/**
+	 * Item handlers used by the pattern buffer can change their slot count after this list is created. Keep the cached
+	 * prefix in sync even when the resize happened during deserialization or before the explicit resize callback was
+	 * installed.
+	 */
+	private void refreshHandlerSizes() {
+		int total = 0;
+		int index = 0;
+		for (IItemHandler handler : handlers) {
+			total += handler.getSlots();
+			if (index < prefix.size()) {
+				prefix.set(index, total);
+			} else {
+				prefix.add(total);
+			}
+			index++;
 		}
-
-		if (handler.getSlots() == 0) {
-			handlers.remove(index);
-			prefix.remove(index);
+		while (prefix.size() > handlers.size()) {
+			prefix.remove(prefix.size() - 1);
 		}
 	}
 
 	protected HandlerEntry getHandlerByGlobalIndex(int index) {
+		refreshHandlerSizes();
+		if (index < 0 || index >= getSlots()) return new HandlerEntry(null, 0);
+
 		int handlerIndex = upperBound(prefix, index);
 
-		if (handlerIndex == -1) return new HandlerEntry(null, 0);
+		if (handlerIndex >= handlers.size()) return new HandlerEntry(null, 0);
 
 		return new HandlerEntry(handlers.get(handlerIndex), handlerIndex == 0 ? 0 : prefix.get(handlerIndex - 1));
 	}
 
 	@Override
 	public int getSlots() {
+		refreshHandlerSizes();
 		return prefix.isEmpty() ? 0 : prefix.get(prefix.size() - 1);
 	}
 
@@ -90,7 +101,7 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 	public ItemStack getStackInSlot(int slot) {
 		HandlerEntry entry = getHandlerByGlobalIndex(slot);
 
-		return entry.handler == null ? null : entry.handler.getStackInSlot(slot - entry.index);
+		return entry.handler == null ? ItemStack.EMPTY : entry.handler.getStackInSlot(slot - entry.index);
 	}
 
 	@Override
@@ -122,9 +133,10 @@ public class SegmentItemHandlerList implements IItemHandlerModifiable {
 
 		if (entry.handler != null && entry.handler instanceof IItemHandlerModifiable modifiable) {
 			modifiable.setStackInSlot(slot - entry.index, stack);
-		} else {
-			entry.handler.extractItem(slot, Integer.MAX_VALUE, false);
-			entry.handler.insertItem(slot, stack, false);
+		} else if (entry.handler != null) {
+			int localSlot = slot - entry.index;
+			entry.handler.extractItem(localSlot, Integer.MAX_VALUE, false);
+			entry.handler.insertItem(localSlot, stack, false);
 		}
 	}
 

@@ -30,13 +30,12 @@ public class PatternBufferDualHandler extends DualHandler {
 
 	@Override
 	public int getSlots() {
-		if (itemDelegate == null) return 0;
 		return super.getSlots();
 	}
 
 	@Override
 	public @NotNull ItemStack getStackInSlot(int slot) {
-		if (getSlots() == 0) return ItemStack.EMPTY;
+		if (slot < 0 || slot >= getSlots()) return ItemStack.EMPTY;
 
 		return super.getStackInSlot(slot);
 	}

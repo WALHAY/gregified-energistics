@@ -53,6 +53,7 @@ import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
 import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
+import gregtech.api.metatileentity.multiblock.MultiblockControllerBase;
 import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
 import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.mui.GTGuis;
@@ -100,6 +101,30 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		return new ItemHandlerList(patternHandler.getContainers().stream()
 				.map(PatternContainer::dualInventory)
 				.collect(Collectors.toList()));
+	}
+
+	@Override
+	public void addToMultiBlock(MultiblockControllerBase controller) {
+		super.addToMultiBlock(controller);
+		for (var container : patternHandler) {
+			container.addNotifiableMetaTileEntity(controller);
+		}
+		invalidateRecipeCache(controller);
+	}
+
+	@Override
+	public void removeFromMultiBlock(MultiblockControllerBase controller) {
+		super.removeFromMultiBlock(controller);
+		for (var container : patternHandler) {
+			container.removeNotifiableMetaTileEntity(controller);
+		}
+		invalidateRecipeCache(controller);
+	}
+
+	private void invalidateRecipeCache(MultiblockControllerBase controller) {
+		if (controller instanceof RecipeMapMultiblockController recipeController) {
+			recipeController.getRecipeMapWorkable().invalidate();
+		}
 	}
 
 	@Override
@@ -419,7 +444,15 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 		public PatternContainer(int index) {
 			this.dsh = new DynamicSyncHandler();
-			this.itemInventory = new InfiniteItemStackHandler(0);
+			this.itemInventory = new InfiniteItemStackHandler(0) {
+				@Override
+				protected void onContentsChanged(int slot) {
+					super.onContentsChanged(slot);
+					if (PatternContainer.this.dualHandler != null) {
+						PatternContainer.this.dualHandler.onContentsChanged();
+					}
+				}
+			};
 
 			this.circuitInventory = new GhostCircuitItemStackHandler(MTEMEPatternBuffer.this) {
 				@Override
@@ -433,6 +466,18 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			this.fluidInventory = new FluidTankList(false);
 
 			this.dualHandler = new PatternBufferDualHandler(itemInventory, circuitInventory, fluidInventory);
+			this.circuitInventory.addNotifiableMetaTileEntity(MTEMEPatternBuffer.this);
+		}
+
+		private void addNotifiableMetaTileEntity(MultiblockControllerBase controller) {
+			this.dualHandler.addNotifiableMetaTileEntity(controller);
+			this.dualHandler.addToNotifiedList(controller, this.dualHandler, false);
+		}
+
+		private void removeNotifiableMetaTileEntity(MultiblockControllerBase controller) {
+			this.dualHandler.removeNotifiableMetaTileEntity(controller);
+			controller.getNotifiedItemInputList().remove(this.dualHandler);
+			controller.getNotifiedFluidInputList().remove(this.dualHandler);
 		}
 
 		public void setPattern(ICraftingPatternDetails pattern) {
@@ -464,11 +509,18 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 			List<FluidTank> fluidTanks = new ArrayList<>(fluids);
 			for (int i = 0; i < fluids; ++i) {
-				fluidTanks.add(new FluidTank(Integer.MAX_VALUE));
+				fluidTanks.add(new FluidTank(Integer.MAX_VALUE) {
+					@Override
+					protected void onContentsChanged() {
+						super.onContentsChanged();
+						PatternContainer.this.dualHandler.onContentsChanged();
+					}
+				});
 			}
 
 			this.fluidInventory = new FluidTankList(false, fluidTanks);
 			this.dualHandler.setFluidDelegate(fluidInventory);
+			this.dualHandler.onContentsChanged();
 
 			this.dsh.notifyUpdate(buf -> buf.writeInt(itemInventory.getSlots()).writeInt(fluidInventory.getTanks()));
 		}
