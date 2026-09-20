@@ -513,9 +513,13 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			this.fluidInventory = new FluidTankList(false, fluidTanks);
 			this.dualHandler.setFluidDelegate(fluidInventory);
 			this.dualHandler.onContentsChanged();
+			if (this.initialUpdateSent) {
+				this.dsh.notifyUpdate(
+						buf -> buf.writeInt(itemInventory.getSlots()).writeInt(fluidInventory.getTanks()));
+			}
 
-			// The dynamic contents panel sends its dimensions when it is opened. Sending
-			// this update here would target buffer#N before that panel exists on the client.
+			// Before the panel opens, its first server tick sends the current dimensions. Once open, pattern changes
+			// update the dynamic widget immediately.
 		}
 
 		public IItemHandlerModifiable inventory() {
@@ -650,7 +654,8 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				row.child(Flow.column()
 						.coverChildren()
 						.child(IKey.lang("gregifiedenergistics.gui.buffer_items")
-								.asWidget())
+								.asWidget()
+								.style(IKey.DARK_GRAY))
 						.child(new Grid()
 								.minColWidth(18)
 								.minRowHeight(18)
@@ -671,7 +676,8 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				row.child(Flow.column()
 						.coverChildren()
 						.child(IKey.lang("gregifiedenergistics.gui.buffer_fluids")
-								.asWidget())
+								.asWidget()
+								.style(IKey.DARK_GRAY))
 						.child(new Grid()
 								.minColWidth(18)
 								.minRowHeight(18)
@@ -694,31 +700,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			return row.coverChildren();
 		}
 
-		private static int sectionWidth(int entries) {
-			return Math.max(64, Math.min(4, entries) * 18);
-		}
-
-		private static int sectionHeight(int entries) {
-			if (entries <= 0) return 0;
-			return 18 + ((entries + 3) / 4) * 18;
-		}
-
-		private static int contentWidth(int slots, int fluids) {
-			if (slots <= 0 && fluids <= 0) return 80;
-
-			int width = 0;
-			if (slots > 0) width += sectionWidth(slots);
-			if (fluids > 0) {
-				if (width > 0) width += 10;
-				width += sectionWidth(fluids);
-			}
-			return width;
-		}
-
-		private static int contentHeight(int slots, int fluids) {
-			return Math.max(18, Math.max(sectionHeight(slots), sectionHeight(fluids)));
-		}
-
 		public PopupPanel buildUI(PanelSyncManager syncManager, int index) {
 			this.dsh.widgetProvider(this::contentBuffer);
 			this.initialUpdateSent = false;
@@ -729,24 +710,28 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 							buf -> buf.writeInt(itemInventory.getSlots()).writeInt(fluidInventory.getTanks()));
 				}
 			});
-			int bodyWidth = contentWidth(itemInventory.getSlots(), fluidInventory.getTanks());
-			int bodyHeight = contentHeight(itemInventory.getSlots(), fluidInventory.getTanks());
-			int popupWidth = Math.max(104, bodyWidth + 14);
-			int popupHeight = Math.max(76, bodyHeight + 36);
+			int popupWidth = 198;
+			int popupHeight = 174;
+			int bodyWidth = popupWidth - 14;
+			int bodyHeight = popupHeight - 44;
+			int headerWidth = popupWidth - 40; // reserve the popup close button area
 
 			return (PopupPanel) GTGuis.createPopupPanel("buffer#" + index, popupWidth, popupHeight)
-					.child(IKey.lang("gregifiedenergistics.gui.buffer_contents", index + 1)
-							.asWidget()
-							.pos(7, 6))
+					.child(Flow.row()
+							.pos(7, 5)
+							.width(headerWidth)
+							.height(18)
+							.mainAxisAlignment(Alignment.MainAxis.SPACE_BETWEEN)
+							.crossAxisAlignment(Alignment.CrossAxis.CENTER)
+							.child(IKey.lang("gregifiedenergistics.gui.buffer_contents", index + 1)
+									.asWidget())
+							.child(new GhostCircuitSlotWidget()
+									.slot(circuitInventory, 0)
+									.background(GTGuiTextures.SLOT, GTGuiTextures.INT_CIRCUIT_OVERLAY)))
 					.child(new DynamicSyncedWidget<>()
 							.pos(7, 28)
 							.size(bodyWidth, bodyHeight)
-							.syncHandler(this.dsh))
-					.child(new GhostCircuitSlotWidget()
-							.slot(circuitInventory, 0)
-							.top(5)
-							.right(27)
-							.background(GTGuiTextures.SLOT, GTGuiTextures.INT_CIRCUIT_OVERLAY));
+							.syncHandler(this.dsh));
 		}
 	}
 }

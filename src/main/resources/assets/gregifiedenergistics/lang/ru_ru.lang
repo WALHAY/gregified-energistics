@@ -44,5 +44,5 @@ gregifiedenergistics.gui.pattern_list=Шаблоны сборочной лини
 gregifiedenergistics.gui.buffer_contents=Содержимое буфера №%d
 gregifiedenergistics.gui.buffer_items=Предметы
 gregifiedenergistics.gui.buffer_fluids=Жидкости
-gregifiedenergistics.gui.buffer_empty=Входы не сохранены
+gregifiedenergistics.gui.buffer_empty=Нет шаблона
 gregifiedenergistics.gui.substitution_hint=Нажмите или прокрутите для смены; Shift-нажатие выбирает замену
