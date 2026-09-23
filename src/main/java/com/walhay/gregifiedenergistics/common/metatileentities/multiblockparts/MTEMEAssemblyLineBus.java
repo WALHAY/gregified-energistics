@@ -58,6 +58,7 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 	}
 
 	@Override
+	@SuppressWarnings("UnstableApiUsage")
 	public Widget<?> createPatternList(ModularPanel panel, PanelSyncManager syncHandler) {
 		panel.child(SlotGroupWidget.playerInventory(false).left(7).bottom(7));
 		syncHandler.registerSlotGroup("item_inv", 4);
@@ -78,9 +79,8 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 								'I',
 								index -> new ItemSlot()
 										.slot(SyncHandlers.itemSlot(patternHandler, index)
-												.changeListener((newItem, onlyAmountChanged, client, init) -> {
-													patternHandler.onContentsChanged(index);
-												}))
+												.changeListener((newItem, onlyAmountChanged, client, init) ->
+														patternHandler.onContentsChanged(index)))
 										.background(
 												GTGuiTextures.SLOT,
 												GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY

@@ -28,7 +28,7 @@ public class GhostCircuitPatternWrapper extends AbstractPatternHelper {
 				.map(IAEItemStack::getDefinition)
 				.filter(IntCircuitIngredient::isIntegratedCircuit)
 				.findFirst();
-		this.option = stack.isPresent() ? IntCircuitIngredient.getCircuitConfiguration(stack.get()) : -1;
+		this.option = stack.map(IntCircuitIngredient::getCircuitConfiguration).orElse(-1);
 	}
 
 	public static ICraftingPatternDetails wrap(ICraftingPatternDetails pattern) {
@@ -43,9 +43,7 @@ public class GhostCircuitPatternWrapper extends AbstractPatternHelper {
 
 		return Arrays.stream(inputs)
 				.map(IAEItemStack::getDefinition)
-				.filter(IntCircuitIngredient::isIntegratedCircuit)
-				.findFirst()
-				.isPresent();
+				.anyMatch(IntCircuitIngredient::isIntegratedCircuit);
 	}
 
 	protected static IAEItemStack[] filterCircuits(IAEItemStack[] inputs) {

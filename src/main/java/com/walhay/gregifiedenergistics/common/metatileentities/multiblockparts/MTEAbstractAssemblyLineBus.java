@@ -171,7 +171,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 									.items()
 									.encodedPattern()
 									.maybeItem()
-									.get())
+									.orElse(Items.AIR))
 							.asIcon()
 							.size(16)));
 
@@ -180,7 +180,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 
 		var substitutionList = createSubstitutionList(panel, sync);
 		if (substitutionList != null) {
-			tabs.child(new PageButton(pageCounter++, controller)
+			tabs.child(new PageButton(pageCounter, controller)
 					.tab(GuiTextures.TAB_TOP, 0)
 					.addTooltipLine(IKey.lang("gregtech.machine.workbench.tab.item_list"))
 					.addTooltipLine(
@@ -191,7 +191,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 									.items()
 									.memoryCard()
 									.maybeItem()
-									.get())
+									.orElse(Items.AIR))
 							.asIcon()
 							.size(16)));
 
@@ -203,6 +203,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 				.child(paged.top(7).widthRel(0.9f).controller(controller));
 	}
 
+	@SuppressWarnings("UnstableApiUsage")
 	public Flow createButtonBar(PanelSyncManager sync) {
 		BooleanSyncValue workingStateValue = new BooleanSyncValue(this::isWorkingEnabled, this::setWorkingEnabled);
 		BooleanSyncValue fluidStateValue = new BooleanSyncValue(this::getUsingFluids, this::setUsingFluids);
@@ -284,6 +285,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	}
 
 	@Override
+	@SuppressWarnings("UnstableApiUsage")
 	public boolean usesMui2() {
 		return true;
 	}

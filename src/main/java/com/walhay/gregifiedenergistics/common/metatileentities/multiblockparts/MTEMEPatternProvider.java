@@ -249,11 +249,13 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	}
 
 	@Override
+	@SuppressWarnings("UnstableApiUsage")
 	public boolean usesMui2() {
 		return true;
 	}
 
 	@Override
+	@SuppressWarnings("UnstableApiUsage")
 	public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager panelSyncManager, UISettings settings) {
 		int rowSize = (int) Math.sqrt(getInventorySize());
 		panelSyncManager.registerSlotGroup("item_inv", rowSize);
@@ -323,9 +325,8 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 								.background(GTGuiTextures.SLOT, GTGuiTextures.INT_CIRCUIT_OVERLAY))
 						.child(new ItemSlot()
 								.slot(SyncHandlers.itemSlot(patternHandler, 0)
-										.changeListener((newItem, onlyAmountChanged, client, init) -> {
-											patternHandler.onContentsChanged(0);
-										}))
+										.changeListener((newItem, onlyAmountChanged, client, init) ->
+												patternHandler.onContentsChanged(0)))
 								.horizontalCenter()
 								.background(
 										GTGuiTextures.SLOT,

@@ -30,7 +30,7 @@ public abstract class AbstractPatternHelper implements IProvidablePattern, ISubs
 	protected IAEFluidStack[] fluidInputs;
 	private int priority = 0;
 	private final Map<Integer, GTRecipeInput> subMap = new HashMap<>();
-	protected WeakReference<ISubstitutionStorage> substitutionStorage = new WeakReference<ISubstitutionStorage>(null);
+	protected WeakReference<ISubstitutionStorage> substitutionStorage = new WeakReference<>(null);
 
 	protected void parseRecipe(Recipe recipe) {
 		inputs = recipe.getInputs().stream()

@@ -22,11 +22,7 @@ import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.UISettings;
 import com.cleanroommc.modularui.utils.Alignment;
-import com.cleanroommc.modularui.value.sync.DynamicSyncHandler;
-import com.cleanroommc.modularui.value.sync.FluidSlotSyncHandler;
-import com.cleanroommc.modularui.value.sync.ItemSlotSH;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.value.sync.SyncHandlers;
+import com.cleanroommc.modularui.value.sync.*;
 import com.cleanroommc.modularui.widget.Widget;
 import com.cleanroommc.modularui.widgets.DynamicSyncedWidget;
 import com.cleanroommc.modularui.widgets.SlotGroupWidget;
@@ -177,7 +173,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		for (int i = 0; i < inventory.getSizeInventory(); ++i) {
 			var stack = inventory.getStackInSlot(i);
 
-			if (stack == null || stack.isEmpty()) continue;
+			if (stack.isEmpty()) continue;
 
 			if (FakeFluids.isFluidFakeItem(stack)) {
 				FluidStack fluidStack = FakeItemRegister.getStack(stack);
@@ -194,11 +190,13 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	}
 
 	@Override
+	@SuppressWarnings("UnstableApiUsage")
 	public boolean usesMui2() {
 		return true;
 	}
 
 	@Override
+	@SuppressWarnings("UnstableApiUsage")
 	public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager syncManager, UISettings settings) {
 		syncManager.registerSlotGroup("pattern_inv", 9);
 
@@ -223,8 +221,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 									@Override
 									public @NotNull Result onKeyPressed(char typedChar, int keyCode) {
 										if (keyCode == Keyboard.KEY_B) {
-											if (getPanel() == null
-													|| !getPanel().isOpen()) return Result.ACCEPT;
+											if (!getPanel().isOpen()) return Result.ACCEPT;
 											panel.togglePanel();
 											return Result.SUCCESS;
 										}
@@ -241,7 +238,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 												i < container.inventory().getSlots();
 												++i) {
 											var item = container.inventory().getStackInSlot(i);
-											if (item != null && item.getItem() != Items.AIR) {
+											if (item.getItem() != Items.AIR) {
 												tooltip.addFromItem(item);
 											}
 										}
@@ -436,11 +433,9 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	 */
 	private class PatternContainer implements INBTSerializable<NBTTagCompound> {
 
-		private ICraftingPatternDetails pattern;
-
-		private ItemStackHandler itemInventory;
-		private GhostCircuitItemStackHandler circuitInventory;
-		private PatternBufferDualHandler dualHandler;
+		private final ItemStackHandler itemInventory;
+		private final GhostCircuitItemStackHandler circuitInventory;
+		private final PatternBufferDualHandler dualHandler;
 		private FluidTankList fluidInventory;
 
 		private DynamicSyncHandler dsh;
@@ -481,7 +476,6 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 		}
 
 		public void setPattern(ICraftingPatternDetails pattern) {
-			this.pattern = pattern;
 
 			int fluids = 0;
 			int items = 0;
