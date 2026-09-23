@@ -278,15 +278,18 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 						.minColWidth(18)
 						.minRowHeight(18)
 						.horizontalCenter()
-						.mapTo(rowSize, rowSize * rowSize, index -> new ItemSlot()
-								.slot(SyncHandlers.itemSlot(importItems, index)
-										.slotGroup("item_inv")
-										.changeListener((newItem, onlyAmountChanged, client, init) -> {
-											if (onlyAmountChanged
-													&& importItems instanceof GTItemStackHandler gtHandler) {
-												gtHandler.onContentsChanged(index);
-											}
-										}))))
+						.mapTo(
+								rowSize,
+								rowSize * rowSize,
+								index -> new ItemSlot()
+										.slot(SyncHandlers.itemSlot(importItems, index)
+												.slotGroup("item_inv")
+												.changeListener((newItem, onlyAmountChanged, client, init) -> {
+													if (onlyAmountChanged
+															&& importItems instanceof GTItemStackHandler gtHandler) {
+														gtHandler.onContentsChanged(index);
+													}
+												}))))
 				.child(Flow.column()
 						.pos(backgroundWidth - 7 - 18, backgroundHeight - 18 * 4 - 7 - 5)
 						.width(18)

@@ -74,16 +74,18 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 						.row("IIII")
 						.row("IIII")
 						.row("IIII")
-						.key('I', index -> new ItemSlot()
-								.slot(SyncHandlers.itemSlot(patternHandler, index)
-										.changeListener((newItem, onlyAmountChanged, client, init) -> {
-											patternHandler.onContentsChanged(index);
-										}))
-								.background(
-										GTGuiTextures.SLOT,
-										GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY
-												.asIcon()
-												.size(16)))
+						.key(
+								'I',
+								index -> new ItemSlot()
+										.slot(SyncHandlers.itemSlot(patternHandler, index)
+												.changeListener((newItem, onlyAmountChanged, client, init) -> {
+													patternHandler.onContentsChanged(index);
+												}))
+										.background(
+												GTGuiTextures.SLOT,
+												GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY
+														.asIcon()
+														.size(16)))
 						.build()
 						.coverChildren()
 						.horizontalCenter());

@@ -212,8 +212,10 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 						.key(
 								'I',
 								index -> new ItemSlot() {
-									private final IPanelHandler panel =
-											syncManager.syncedPanel("buffer#" + index, true, (sh, ph) -> patternHandler
+									private final IPanelHandler panel = syncManager.syncedPanel(
+											"buffer#" + index,
+											true,
+											(sh, ph) -> patternHandler
 													.getContainers()
 													.get(index)
 													.buildUI(sh, index));
