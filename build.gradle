@@ -329,7 +329,7 @@ tasks.register('cleanroomAfterSync') {
 
 if (propertyBool('use_modern_java_syntax')) {
     tasks.withType(Javadoc).configureEach {
-        sourceCompatibility = 17
+		options.source = '17'
     }
 }
 
