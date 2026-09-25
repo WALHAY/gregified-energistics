@@ -63,6 +63,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.minecraft.block.Block;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
@@ -70,6 +71,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.Constants.NBT;
 import net.minecraftforge.common.util.INBTSerializable;
@@ -91,6 +93,13 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	public MTEMEPatternBuffer(ResourceLocation metaTileEntityId) {
 		super(metaTileEntityId, ZPM, false, IItemStorageChannel.class);
 		this.patternHandler = new PatternHandler(36);
+	}
+
+	@Override
+	public void addInformation(
+			ItemStack stack, @Nullable World player, @NotNull List<String> tooltip, boolean advanced) {
+		super.addInformation(stack, player, tooltip, advanced);
+		tooltip.add(I18n.format("gregifiedenergistics.machine.me_pattern_buffer.tooltip"));
 	}
 
 	@Override
