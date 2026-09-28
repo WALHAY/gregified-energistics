@@ -13,7 +13,7 @@ import org.apache.logging.log4j.Logger;
 		modid = GregifiedEnergisticsMod.MOD_ID,
 		name = GregifiedEnergisticsMod.NAME,
 		version = GregifiedEnergisticsMod.VERSION,
-		dependencies = "required-after:gregtech;required-after:appliedenergistics2;after:jei@[4.15.0,);")
+		dependencies = "required-after:gregtech@[2.8,2.9);required-after:appliedenergistics2;after:jei@[4.15.0,);")
 public class GregifiedEnergisticsMod {
 	public static final String MOD_ID = Tags.MOD_ID;
 	public static final String NAME = Tags.MOD_NAME;

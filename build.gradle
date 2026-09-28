@@ -149,7 +149,7 @@ dependencies {
 
     compileOnly 'org.jetbrains:annotations:26.0.2'
 
-	implementation fileTree(include: ['*.jar'], dir: 'libs')
+	implementation fileTree(dir: 'libs', include: ['*.jar'], exclude: ['gregtech-*.jar', '*-sources.jar'])
 }
 
 apply from: 'gradle/scripts/dependencies.gradle'

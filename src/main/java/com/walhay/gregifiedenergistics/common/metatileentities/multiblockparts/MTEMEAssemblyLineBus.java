@@ -4,21 +4,17 @@ import static gregtech.api.GTValues.LuV;
 
 import appeng.api.networking.crafting.ICraftingPatternDetails;
 import appeng.items.misc.ItemEncodedPattern;
-import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.value.sync.SyncHandlers;
-import com.cleanroommc.modularui.widget.Widget;
-import com.cleanroommc.modularui.widgets.SlotGroupWidget;
-import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.walhay.gregifiedenergistics.GregifiedEnergisticsConfig;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
-import com.walhay.gregifiedenergistics.api.mui.GregifiedEnergisticsGuiTextures;
+import com.walhay.gregifiedenergistics.api.gui.GregifiedEnergisticsGuiTextures;
 import com.walhay.gregifiedenergistics.api.patterns.implementations.DataStickPatternHelper;
+import gregtech.api.gui.GuiTextures;
+import gregtech.api.gui.widgets.LabelWidget;
+import gregtech.api.gui.widgets.ScrollableListWidget;
+import gregtech.api.gui.widgets.SlotWidget;
+import gregtech.api.gui.widgets.WidgetGroup;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
-import gregtech.api.mui.GTGuiTextures;
 import gregtech.api.util.AssemblyLineManager;
 import java.io.IOException;
 import java.util.Collection;
@@ -57,37 +53,22 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 	}
 
 	@Override
-	@SuppressWarnings("UnstableApiUsage")
-	public Widget<?> createPatternList(ModularPanel panel, PanelSyncManager syncHandler) {
-		panel.child(SlotGroupWidget.playerInventory(false).left(7).bottom(7));
-		syncHandler.registerSlotGroup("item_inv", 4);
-
-		return Flow.column()
-				.name("pattern list")
-				.widthRel(0.9f)
-				.horizontalCenter()
-				.coverChildrenHeight()
-				.child(IKey.lang("gregifiedenergistics.gui.pattern_list").asWidget())
-				.child(SlotGroupWidget.builder()
-						.slotGroup("item_inv")
-						.row("IIII")
-						.row("IIII")
-						.row("IIII")
-						.row("IIII")
-						.key(
-								'I',
-								index -> new ItemSlot()
-										.slot(SyncHandlers.itemSlot(patternHandler, index)
-												.changeListener((newItem, onlyAmountChanged, client, init) ->
-														patternHandler.onContentsChanged(index)))
-										.background(
-												GTGuiTextures.SLOT,
-												GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY
-														.asIcon()
-														.size(16)))
-						.build()
-						.coverChildren()
-						.horizontalCenter());
+	protected WidgetGroup createPatternList() {
+		WidgetGroup page = new WidgetGroup(0, 0, 199, 109);
+		page.addWidget(new LabelWidget(7, 7, "gregifiedenergistics.gui.pattern_list"));
+		ScrollableListWidget list = new ScrollableListWidget(58, 22, 83, 82);
+		for (int firstSlot = 0; firstSlot < patternHandler.getSlots(); firstSlot += 4) {
+			WidgetGroup row = new WidgetGroup(0, 0, 72, 18);
+			for (int column = 0; column < 4 && firstSlot + column < patternHandler.getSlots(); column++) {
+				int index = firstSlot + column;
+				row.addWidget(new SlotWidget(patternHandler, index, column * 18, 0)
+						.setBackgroundTexture(GuiTextures.SLOT, GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY)
+						.setChangeListener(() -> patternHandler.onContentsChanged(index)));
+			}
+			list.addWidget(row);
+		}
+		page.addWidget(list);
+		return page;
 	}
 
 	@Override

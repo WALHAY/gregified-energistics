@@ -6,28 +6,21 @@ import appeng.api.storage.channels.IItemStorageChannel;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.items.misc.ItemEncodedPattern;
 import codechicken.lib.raytracer.CuboidRayTraceResult;
-import com.cleanroommc.modularui.api.drawable.IKey;
-import com.cleanroommc.modularui.drawable.Icon;
-import com.cleanroommc.modularui.factory.PosGuiData;
-import com.cleanroommc.modularui.screen.ModularPanel;
-import com.cleanroommc.modularui.screen.UISettings;
-import com.cleanroommc.modularui.value.sync.BooleanSyncValue;
-import com.cleanroommc.modularui.value.sync.PanelSyncManager;
-import com.cleanroommc.modularui.value.sync.SyncHandlers;
-import com.cleanroommc.modularui.widgets.SlotGroupWidget;
-import com.cleanroommc.modularui.widgets.ToggleButton;
-import com.cleanroommc.modularui.widgets.layout.Flow;
-import com.cleanroommc.modularui.widgets.layout.Grid;
-import com.cleanroommc.modularui.widgets.slot.ItemSlot;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
+import com.walhay.gregifiedenergistics.api.gui.CircuitSlotWidget;
+import com.walhay.gregifiedenergistics.api.gui.GregifiedEnergisticsGuiTextures;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
-import com.walhay.gregifiedenergistics.api.mui.GregifiedEnergisticsGuiTextures;
 import gregtech.api.GTValues;
 import gregtech.api.capability.GregtechDataCodes;
 import gregtech.api.capability.IGhostSlotConfigurable;
 import gregtech.api.capability.impl.GhostCircuitItemStackHandler;
 import gregtech.api.capability.impl.ItemHandlerList;
 import gregtech.api.capability.impl.NotifiableItemStackHandler;
+import gregtech.api.gui.GuiTextures;
+import gregtech.api.gui.ModularUI;
+import gregtech.api.gui.resources.TextureArea;
+import gregtech.api.gui.widgets.SlotWidget;
+import gregtech.api.gui.widgets.ToggleButtonWidget;
 import gregtech.api.items.itemhandlers.GTItemStackHandler;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
@@ -35,13 +28,11 @@ import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.MultiblockControllerBase;
-import gregtech.api.mui.GTGuiTextures;
-import gregtech.api.mui.GTGuis;
-import gregtech.api.mui.widget.GhostCircuitSlotWidget;
 import gregtech.api.util.GTHashMaps;
 import gregtech.api.util.GTTransferUtils;
 import gregtech.common.metatileentities.multi.multiblockpart.MetaTileEntityItemBus;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -81,6 +72,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 		var world = getWorld();
 		if (world != null && !world.isRemote) {
 			writeCustomData(GregtechDataCodes.WORKING_ENABLED, buf -> buf.writeBoolean(workingEnabled));
+			markDirty();
 		}
 		notifyPatternChange();
 	}
@@ -209,6 +201,12 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 		super.receiveInitialSyncData(buf);
 		this.workingEnabled = buf.readBoolean();
 		this.autoCollapse = buf.readBoolean();
+		try {
+			NBTTagCompound patterns = buf.readCompoundTag();
+			if (patterns != null) patternHandler.deserializeNBT(patterns);
+		} catch (IOException e) {
+			throw new IllegalArgumentException("Invalid pattern provider sync data", e);
+		}
 	}
 
 	@Override
@@ -249,90 +247,49 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	}
 
 	@Override
-	@SuppressWarnings("UnstableApiUsage")
-	public boolean usesMui2() {
-		return true;
-	}
-
-	@Override
-	@SuppressWarnings("UnstableApiUsage")
-	public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager panelSyncManager, UISettings settings) {
+	protected ModularUI createUI(EntityPlayer player) {
 		int rowSize = (int) Math.sqrt(getInventorySize());
-		panelSyncManager.registerSlotGroup("item_inv", rowSize);
-
-		int backgroundWidth = Math.max(
-				9 * 18 + 18 + 14 + 5, // Player Inv width
-				rowSize * 18 + 14); // Bus Inv width
+		int backgroundWidth = Math.max(199, rowSize * 18 + 14);
 		int backgroundHeight = 18 + 18 * rowSize + 94;
-
-		Icon detail = GTGuiTextures.BUTTON_POWER_DETAIL.asIcon().size(18, 6).marginTop(24);
-
-		BooleanSyncValue workingStateValue = new BooleanSyncValue(() -> workingEnabled, val -> workingEnabled = val);
-		BooleanSyncValue collapseStateValue = new BooleanSyncValue(() -> autoCollapse, val -> autoCollapse = val);
-
-		return GTGuis.createPanel(this, backgroundWidth, backgroundHeight)
-				.child(IKey.lang(getMetaFullName()).asWidget().pos(5, 5))
-				.child(SlotGroupWidget.playerInventory(false).left(7).bottom(7))
-				.child(new Grid()
-						.top(18)
-						.height(rowSize * 18)
-						.minElementMargin(0, 0)
-						.minColWidth(18)
-						.minRowHeight(18)
-						.horizontalCenter()
-						.mapTo(
-								rowSize,
-								rowSize * rowSize,
-								index -> new ItemSlot()
-										.slot(SyncHandlers.itemSlot(importItems, index)
-												.slotGroup("item_inv")
-												.changeListener((newItem, onlyAmountChanged, client, init) -> {
-													if (onlyAmountChanged
-															&& importItems instanceof GTItemStackHandler gtHandler) {
-														gtHandler.onContentsChanged(index);
-													}
-												}))))
-				.child(Flow.column()
-						.pos(backgroundWidth - 7 - 18, backgroundHeight - 18 * 4 - 7 - 5)
-						.width(18)
-						.height(18 * 4 + 5)
-						.child(new ToggleButton()
-								.name("power_button")
-								.size(18)
-								.disableHoverBackground()
-								.overlay(true, detail, GTGuiTextures.BUTTON_POWER[1])
-								.overlay(false, detail, GTGuiTextures.BUTTON_POWER[0])
-								.value(workingStateValue)
-								.tooltipAutoUpdate(true)
-								.tooltipBuilder(t -> t.addLine(IKey.lang(
-										workingStateValue.getBoolValue()
-												? "gregifiedenergistics.gui.working.enabled"
-												: "gregifiedenergistics.gui.working.disabled")))
-								.marginTop(4)
-								.top(18 * 3 + 5))
-						.child(new ToggleButton()
-								.top(18 * 2)
-								.value(collapseStateValue)
-								.overlay(GTGuiTextures.BUTTON_AUTO_COLLAPSE)
-								.tooltipAutoUpdate(true)
-								.tooltipBuilder(t -> t.addLine(
-										collapseStateValue.getBoolValue()
-												? IKey.lang("gregtech.gui.item_auto_collapse.tooltip.enabled")
-												: IKey.lang("gregtech.gui.item_auto_collapse.tooltip.disabled"))))
-						.child(new GhostCircuitSlotWidget()
-								.slot(circuitInventory, 0)
-								.top(18)
-								.background(GTGuiTextures.SLOT, GTGuiTextures.INT_CIRCUIT_OVERLAY))
-						.child(new ItemSlot()
-								.slot(SyncHandlers.itemSlot(patternHandler, 0)
-										.changeListener((newItem, onlyAmountChanged, client, init) ->
-												patternHandler.onContentsChanged(0)))
-								.horizontalCenter()
-								.background(
-										GTGuiTextures.SLOT,
-										GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY
-												.asIcon()
-												.size(16))));
+		ModularUI.Builder builder = ModularUI.builder(GuiTextures.BACKGROUND, backgroundWidth, backgroundHeight)
+				.label(7, 5, getMetaFullName())
+				.bindPlayerInventory(player.inventory, GuiTextures.SLOT, 7, backgroundHeight - 83);
+		int startX = (backgroundWidth - rowSize * 18) / 2;
+		for (int index = 0; index < importItems.getSlots(); index++) {
+			int slot = index;
+			builder.widget(new SlotWidget(importItems, slot, startX + index % rowSize * 18, 18 + index / rowSize * 18)
+					.setBackgroundTexture(GuiTextures.SLOT)
+					.setChangeListener(() -> {
+						if (importItems instanceof GTItemStackHandler handler) handler.onContentsChanged(slot);
+					}));
+		}
+		int buttonX = backgroundWidth - 25;
+		int buttonY = backgroundHeight - 84;
+		return builder.widget(new SlotWidget(patternHandler, 0, buttonX, buttonY)
+						.setBackgroundTexture(GuiTextures.SLOT, GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY)
+						.setChangeListener(() -> patternHandler.onContentsChanged(0)))
+				.widget(new CircuitSlotWidget(circuitInventory, buttonX, buttonY + 18))
+				.widget(new ToggleButtonWidget(
+								buttonX,
+								buttonY + 36,
+								18,
+								18,
+								TextureArea.fullImage("textures/gui/widget/button_auto_collapse_overlay.png"),
+								this::isAutoCollapse,
+								this::setAutoCollapse)
+						.shouldUseBaseBackground()
+						.setTooltipText("gregtech.gui.item_auto_collapse.tooltip"))
+				.image(buttonX, buttonY + 54, 18, 6, GuiTextures.BUTTON_POWER_DETAIL)
+				.widget(new ToggleButtonWidget(
+								buttonX,
+								buttonY + 59,
+								18,
+								18,
+								GuiTextures.BUTTON_POWER,
+								this::isWorkingEnabled,
+								this::setWorkingEnabled)
+						.setTooltipText("gregifiedenergistics.gui.working"))
+				.build(getHolder(), player);
 	}
 
 	/** Exact copy of {@link MetaTileEntityItemBus#collapseInventorySlotContents(IItemHandlerModifiable)} */

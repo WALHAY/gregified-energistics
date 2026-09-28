@@ -45,4 +45,6 @@ gregifiedenergistics.gui.buffer_contents=Buffer #%d contents
 gregifiedenergistics.gui.buffer_items=Items
 gregifiedenergistics.gui.buffer_fluids=Fluids
 gregifiedenergistics.gui.buffer_empty=No pattern
+gregifiedenergistics.gui.buffer_hint=Hover a pattern and press B.
+gregifiedenergistics.gui.back=Back to patterns
 gregifiedenergistics.gui.substitution_hint=Click or scroll to cycle; Shift-click to choose a substitution
