@@ -48,5 +48,4 @@ gregifiedenergistics.gui.buffer_empty=No pattern
 gregifiedenergistics.gui.buffer_hint=Select a pattern, then click View.
 gregifiedenergistics.gui.back=Back to patterns
 gregifiedenergistics.gui.view=View
-gregifiedenergistics.gui.view_pattern_contents=View this pattern's buffered inputs
 gregifiedenergistics.gui.substitution_hint=Click or scroll to cycle; Shift-click to choose a substitution

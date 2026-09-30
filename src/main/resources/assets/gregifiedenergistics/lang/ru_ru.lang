@@ -48,5 +48,4 @@ gregifiedenergistics.gui.buffer_empty=Нет шаблона
 gregifiedenergistics.gui.buffer_hint=Выберите шаблон и нажмите «Просмотр».
 gregifiedenergistics.gui.back=Назад к шаблонам
 gregifiedenergistics.gui.view=Просмотр
-gregifiedenergistics.gui.view_pattern_contents=Показать содержимое буфера шаблона
 gregifiedenergistics.gui.substitution_hint=Нажмите или прокрутите для смены; Shift-нажатие выбирает замену
