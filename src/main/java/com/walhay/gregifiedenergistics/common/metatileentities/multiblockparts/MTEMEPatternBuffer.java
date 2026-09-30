@@ -197,6 +197,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 		for (int slot = 0; slot < patternHandler.getSlots(); ++slot) {
 			int index = slot;
+
 			patterns.addWidget(
 					new SlotWidget(patternHandler, index, 25 + index % 9 * 18, 24 + index / 9 * 18) {
 						private boolean hovered;
@@ -217,6 +218,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 							return false;
 						}
 					}.setBackgroundTexture(GuiTextures.SLOT, GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY)
+							.setTooltipText(I18n.format("gregifiedenergistics.gui.buffer_inventory_hint"))
 							.setChangeListener(() -> patternHandler.onContentsChanged(index)));
 		}
 
