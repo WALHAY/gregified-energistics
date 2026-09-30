@@ -192,12 +192,24 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	protected ModularUI createUI(EntityPlayer player) {
 		PageWidgetGroup pages = new PageWidgetGroup(212, 138);
 		WidgetGroup patterns = new WidgetGroup(0, 0, 212, 138);
+		int[] selectedPattern = {0};
 		patterns.addWidget(new LabelWidget(7, 7, "gregifiedenergistics.gui.patterns_grid"));
+		patterns.addWidget(new ClickButtonWidget(158, 3, 47, 18, "gregifiedenergistics.gui.view", click -> {
+					if (pages.isRemote()) pages.selectPage(selectedPattern[0] + 1);
+				})
+				.setShouldClientCallback(true)
+				.setTooltipText("gregifiedenergistics.gui.view_pattern_contents"));
 		for (int slot = 0; slot < patternHandler.getSlots(); slot++) {
 			int index = slot;
 			patterns.addWidget(
 					new SlotWidget(patternHandler, index, 25 + index % 9 * 18, 24 + index / 9 * 18) {
 						private boolean hovered;
+
+						@Override
+						public boolean mouseClicked(int mouseX, int mouseY, int button) {
+							if (isMouseOverElement(mouseX, mouseY)) selectedPattern[0] = index;
+							return super.mouseClicked(mouseX, mouseY, button);
+						}
 
 						@Override
 						public void drawInBackground(
