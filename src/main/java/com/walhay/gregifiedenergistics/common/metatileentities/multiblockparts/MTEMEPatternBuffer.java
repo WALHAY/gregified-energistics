@@ -192,8 +192,14 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	protected ModularUI createUI(EntityPlayer player) {
 		PageWidgetGroup pages = new PageWidgetGroup(212, 138);
 		WidgetGroup patterns = new WidgetGroup(0, 0, 212, 138);
+		int[] selectedPattern = {0};
 
 		patterns.addWidget(new LabelWidget(7, 7, "gregifiedenergistics.gui.patterns_grid"));
+		patterns.addWidget(new ClickButtonWidget(158, 3, 47, 18, "gregifiedenergistics.gui.view", click -> {
+					if (pages.isRemote()) pages.selectPage(selectedPattern[0] + 1);
+				})
+				.setShouldClientCallback(true)
+				.setTooltipText("gregifiedenergistics.gui.view_pattern_contents"));
 
 		for (int slot = 0; slot < patternHandler.getSlots(); ++slot) {
 			int index = slot;
@@ -210,6 +216,12 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 						}
 
 						@Override
+						public boolean mouseClicked(int mouseX, int mouseY, int button) {
+							if (isMouseOverElement(mouseX, mouseY)) selectedPattern[0] = index;
+							return super.mouseClicked(mouseX, mouseY, button);
+						}
+
+						@Override
 						public boolean keyTyped(char typedChar, int keyCode) {
 							if (hovered && keyCode == Keyboard.KEY_B) {
 								pages.selectPage(index + 1);
@@ -218,7 +230,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 							return false;
 						}
 					}.setBackgroundTexture(GuiTextures.SLOT, GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY)
-							.setTooltipText(I18n.format("gregifiedenergistics.gui.buffer_inventory_hint"))
+							.setTooltipText("gregifiedenergistics.gui.buffer_inventory_hint")
 							.setChangeListener(() -> patternHandler.onContentsChanged(index)));
 		}
 

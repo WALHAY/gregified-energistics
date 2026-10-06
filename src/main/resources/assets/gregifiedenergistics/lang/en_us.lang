@@ -46,6 +46,7 @@ gregifiedenergistics.gui.buffer_items=Items
 gregifiedenergistics.gui.buffer_fluids=Fluids
 gregifiedenergistics.gui.buffer_empty=No pattern
 gregifiedenergistics.gui.buffer_hint=Select a pattern, then click View.
+gregifiedenergistics.gui.buffer_inventory_hint=Press B or use View to inspect this pattern's buffered inputs.
 gregifiedenergistics.gui.back=Back to patterns
 gregifiedenergistics.gui.view=View
 gregifiedenergistics.gui.substitution_hint=Click or scroll to cycle; Shift-click to choose a substitution

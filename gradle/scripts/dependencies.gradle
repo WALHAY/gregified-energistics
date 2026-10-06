@@ -72,7 +72,6 @@ dependencies {
 
 	implementation files("libs/gregtech-1.12.2-${propertyString('gtceu_version')}-dev.jar")
 
-	// GTCEu 2.8 requires MUI 2. Addon screens use gregtech.api.gui.
 	implementation("com.cleanroommc:modularui:2.5.0-rc4") { transitive = false }
 
     implementation rfg.deobf("curse.maven:codechicken-lib-1-8-242818:2779848")

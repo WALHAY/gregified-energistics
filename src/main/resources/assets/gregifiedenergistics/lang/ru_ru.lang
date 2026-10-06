@@ -46,6 +46,7 @@ gregifiedenergistics.gui.buffer_items=Предметы
 gregifiedenergistics.gui.buffer_fluids=Жидкости
 gregifiedenergistics.gui.buffer_empty=Нет шаблона
 gregifiedenergistics.gui.buffer_hint=Выберите шаблон и нажмите «Просмотр».
+gregifiedenergistics.gui.buffer_inventory_hint=Нажмите B или «Просмотр», чтобы открыть содержимое буфера шаблона.
 gregifiedenergistics.gui.back=Назад к шаблонам
 gregifiedenergistics.gui.view=Просмотр
 gregifiedenergistics.gui.substitution_hint=Нажмите или прокрутите для смены; Shift-нажатие выбирает замену
