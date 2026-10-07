@@ -15,6 +15,9 @@ import appeng.api.storage.data.IAEItemStack;
 import appeng.fluids.util.AEFluidStack;
 import appeng.items.misc.ItemEncodedPattern;
 import appeng.util.item.AEItemStack;
+import codechicken.lib.render.CCRenderState;
+import codechicken.lib.render.pipeline.IVertexOperation;
+import codechicken.lib.vec.Matrix4;
 import com.glodblock.github.common.item.fake.FakeFluids;
 import com.glodblock.github.common.item.fake.FakeItemRegister;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
@@ -26,6 +29,7 @@ import com.walhay.gregifiedenergistics.api.gui.PageWidgetGroup;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
 import com.walhay.gregifiedenergistics.api.patterns.implementations.GhostCircuitPatternWrapper;
 import com.walhay.gregifiedenergistics.api.util.FluidCraftingUtils;
+import com.walhay.gregifiedenergistics.client.render.GregifiedEnergisticsTextures;
 import com.walhay.gregifiedenergistics.common.gui.PatternBufferContentsWidget;
 import gregtech.api.capability.IMultipleTankHandler;
 import gregtech.api.capability.impl.FluidTankList;
@@ -46,6 +50,7 @@ import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.MultiblockControllerBase;
 import gregtech.api.util.GTTransferUtils;
+import gregtech.client.renderer.texture.cube.SimpleOverlayRenderer;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -280,6 +285,18 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	@Override
 	public MetaTileEntity createMetaTileEntity(IGregTechTileEntity tileEntity) {
 		return new MTEMEPatternBuffer(metaTileEntityId);
+	}
+
+	private SimpleOverlayRenderer getOverlay() {
+		return isActive()
+				? GregifiedEnergisticsTextures.ME_PATTERN_BUFFER_ACTIVE
+				: GregifiedEnergisticsTextures.ME_PATTERN_BUFFER;
+	}
+
+	@Override
+	public void renderMetaTileEntity(CCRenderState renderState, Matrix4 translation, IVertexOperation[] pipeline) {
+		super.renderMetaTileEntity(renderState, translation, pipeline);
+		getOverlay().renderSided(getFrontFacing(), renderState, translation, pipeline);
 	}
 
 	@Override

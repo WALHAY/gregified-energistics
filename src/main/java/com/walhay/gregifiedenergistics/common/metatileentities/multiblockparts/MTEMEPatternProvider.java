@@ -6,10 +6,14 @@ import appeng.api.storage.channels.IItemStorageChannel;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.items.misc.ItemEncodedPattern;
 import codechicken.lib.raytracer.CuboidRayTraceResult;
+import codechicken.lib.render.CCRenderState;
+import codechicken.lib.render.pipeline.IVertexOperation;
+import codechicken.lib.vec.Matrix4;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
 import com.walhay.gregifiedenergistics.api.gui.CircuitSlotWidget;
 import com.walhay.gregifiedenergistics.api.gui.GregifiedEnergisticsGuiTextures;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
+import com.walhay.gregifiedenergistics.client.render.GregifiedEnergisticsTextures;
 import gregtech.api.GTValues;
 import gregtech.api.capability.GregtechDataCodes;
 import gregtech.api.capability.IGhostSlotConfigurable;
@@ -30,6 +34,7 @@ import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.MultiblockControllerBase;
 import gregtech.api.util.GTHashMaps;
 import gregtech.api.util.GTTransferUtils;
+import gregtech.client.renderer.texture.cube.SimpleOverlayRenderer;
 import gregtech.common.metatileentities.multi.multiblockpart.MetaTileEntityItemBus;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import java.io.IOException;
@@ -99,6 +104,18 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	@Override
 	public MetaTileEntity createMetaTileEntity(IGregTechTileEntity holder) {
 		return new MTEMEPatternProvider(metaTileEntityId, getTier());
+	}
+
+	private SimpleOverlayRenderer getOverlay() {
+		return isActive()
+				? GregifiedEnergisticsTextures.ME_PATTERN_PROVIDER_ACTIVE
+				: GregifiedEnergisticsTextures.ME_PATTERN_PROVIDER;
+	}
+
+	@Override
+	public void renderMetaTileEntity(CCRenderState renderState, Matrix4 translation, IVertexOperation[] pipeline) {
+		super.renderMetaTileEntity(renderState, translation, pipeline);
+		getOverlay().renderSided(getFrontFacing(), renderState, translation, pipeline);
 	}
 
 	@Override
