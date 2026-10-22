@@ -4,7 +4,6 @@ import gregtech.api.capability.DualHandler;
 import gregtech.api.capability.IMultipleTankHandler;
 import gregtech.api.capability.impl.GhostCircuitItemStackHandler;
 import gregtech.api.capability.impl.ItemHandlerList;
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import net.minecraft.item.ItemStack;
@@ -16,17 +15,6 @@ public class PatternBufferDualHandler extends DualHandler {
 
 	private final IItemHandlerModifiable itemInventory;
 	private final GhostCircuitItemStackHandler circuitInventory;
-
-	private static final Field UNWRAPPED;
-
-	static {
-		try {
-			UNWRAPPED = DualHandler.class.getDeclaredField("unwrapped");
-			UNWRAPPED.setAccessible(true);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
 
 	@Override
 	public @NotNull ItemStack getStackInSlot(int slot) {
@@ -47,18 +35,10 @@ public class PatternBufferDualHandler extends DualHandler {
 	public void setFluidDelegate(IMultipleTankHandler fluidTank) {
 		this.fluidDelegate = fluidTank;
 
-		try {
-			@SuppressWarnings("unchecked")
-			List<IMultipleTankHandler.ITankEntry> unwrapped =
-					(List<IMultipleTankHandler.ITankEntry>) UNWRAPPED.get(this);
-
-			unwrapped.clear();
-
-			for (var entry : this.fluidDelegate.getFluidTanks()) {
-				unwrapped.add(entry instanceof DualEntry dualEntry ? dualEntry : new DualEntry(this, entry));
-			}
-		} catch (Exception e) {
-			throw new RuntimeException(e);
+		List<IMultipleTankHandler.ITankEntry> entries = super.getFluidTanks();
+		entries.clear();
+		for (var entry : fluidTank.getFluidTanks()) {
+			entries.add(new DualEntry(this, entry));
 		}
 	}
 

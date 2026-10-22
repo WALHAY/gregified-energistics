@@ -4,6 +4,7 @@ import gregtech.api.capability.impl.GhostCircuitItemStackHandler;
 import gregtech.api.gui.GuiTextures;
 import gregtech.api.gui.widgets.GhostCircuitSlotWidget;
 import gregtech.api.util.LocalizationUtils;
+import net.minecraft.network.PacketBuffer;
 
 public class CircuitSlotWidget extends GhostCircuitSlotWidget {
 
@@ -13,6 +14,18 @@ public class CircuitSlotWidget extends GhostCircuitSlotWidget {
 		super(inventory, 0, x, y);
 		this.inventory = inventory;
 		setBackgroundTexture(GuiTextures.SLOT, GuiTextures.INT_CIRCUIT_OVERLAY);
+	}
+
+	@Override
+	public void handleClientAction(int id, PacketBuffer buffer) {
+		if (id == 3) {
+			buffer.markReaderIndex();
+			int value = buffer.readVarInt();
+			buffer.resetReaderIndex();
+			if (value < -1 || value > 32) return;
+		}
+		super.handleClientAction(id, buffer);
+		if (id >= 1 && id <= 3) gui.holder.markAsDirty();
 	}
 
 	@Override

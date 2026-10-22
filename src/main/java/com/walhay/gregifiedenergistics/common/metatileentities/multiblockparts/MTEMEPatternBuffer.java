@@ -23,18 +23,19 @@ import com.glodblock.github.common.item.fake.FakeItemRegister;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
 import com.walhay.gregifiedenergistics.api.capability.InfiniteItemStackHandler;
 import com.walhay.gregifiedenergistics.api.capability.PatternBufferDualHandler;
+import com.walhay.gregifiedenergistics.api.capability.SegmentItemHandlerList;
 import com.walhay.gregifiedenergistics.api.gui.CircuitSlotWidget;
 import com.walhay.gregifiedenergistics.api.gui.GregifiedEnergisticsGuiTextures;
 import com.walhay.gregifiedenergistics.api.gui.PageWidgetGroup;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
 import com.walhay.gregifiedenergistics.api.patterns.implementations.GhostCircuitPatternWrapper;
 import com.walhay.gregifiedenergistics.api.util.FluidCraftingUtils;
+import com.walhay.gregifiedenergistics.api.util.PatternBufferTransfer;
 import com.walhay.gregifiedenergistics.client.render.GregifiedEnergisticsTextures;
 import com.walhay.gregifiedenergistics.common.gui.PatternBufferContentsWidget;
 import gregtech.api.capability.IMultipleTankHandler;
 import gregtech.api.capability.impl.FluidTankList;
 import gregtech.api.capability.impl.GhostCircuitItemStackHandler;
-import gregtech.api.capability.impl.ItemHandlerList;
 import gregtech.api.gui.GuiTextures;
 import gregtech.api.gui.IRenderContext;
 import gregtech.api.gui.ModularUI;
@@ -49,7 +50,6 @@ import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.MultiblockControllerBase;
-import gregtech.api.util.GTTransferUtils;
 import gregtech.client.renderer.texture.cube.SimpleOverlayRenderer;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.ArrayList;
@@ -57,7 +57,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
-import net.minecraft.block.Block;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.InventoryCrafting;
@@ -70,9 +69,7 @@ import net.minecraftforge.common.util.Constants;
 import net.minecraftforge.common.util.Constants.NBT;
 import net.minecraftforge.common.util.INBTSerializable;
 import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidTank;
 import net.minecraftforge.items.IItemHandlerModifiable;
-import net.minecraftforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.input.Keyboard;
@@ -98,7 +95,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 	@Override
 	public IItemHandlerModifiable getImportItems() {
-		return new ItemHandlerList(patternHandler.getContainers().stream()
+		return new SegmentItemHandlerList(patternHandler.getContainers().stream()
 				.map(PatternContainer::dualInventory)
 				.collect(Collectors.toList()));
 	}
@@ -122,17 +119,20 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	@Override
 	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
 		super.clearMachineInventory(itemBuffer);
-		clearInventory(itemBuffer, patternHandler);
 		for (var container : patternHandler) {
-			clearInventory(itemBuffer, container.inventory());
+			for (int slot = 0; slot < container.itemInventory.getSlots(); slot++) {
+				ItemStack stack = container.itemInventory.extractItem(slot, Integer.MAX_VALUE, false);
+				while (!stack.isEmpty()) itemBuffer.add(stack.splitStack(stack.getMaxStackSize()));
+			}
 		}
+		clearInventory(itemBuffer, patternHandler);
 	}
 
 	@Override
 	public void onRemoval() {
 		super.onRemoval();
 		for (var container : patternHandler) {
-			container.refundItems(false);
+			container.refundItems();
 			container.refundFluids();
 		}
 	}
@@ -169,28 +169,25 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 	@Override
 	public boolean pushPattern(ICraftingPatternDetails pattern, InventoryCrafting inventory) {
-		if (!isWorkingEnabled() || !patternHandler.contains(pattern)) return false;
+		if (!isAttachedToMultiBlock() || !isWorkingEnabled() || !patternHandler.contains(pattern)) return false;
 
 		var container = patternHandler.getContainer(pattern);
 		if (container == null) return false;
 
-		for (int i = 0; i < inventory.getSizeInventory(); ++i) {
-			var stack = inventory.getStackInSlot(i);
-
+		List<ItemStack> items = new ArrayList<>();
+		List<FluidStack> fluids = new ArrayList<>();
+		for (int i = 0; i < inventory.getSizeInventory(); i++) {
+			ItemStack stack = inventory.getStackInSlot(i);
 			if (stack.isEmpty()) continue;
-
 			if (FakeFluids.isFluidFakeItem(stack)) {
-				FluidStack fluidStack = FakeItemRegister.getStack(stack);
-				if (fluidStack == null) continue;
-
-				container.insertFluid(fluidStack);
-				continue;
+				FluidStack fluid = FakeItemRegister.getStack(stack);
+				if (fluid == null || fluid.amount <= 0) return false;
+				fluids.add(fluid);
+			} else {
+				items.add(stack);
 			}
-
-			container.insertItem(stack);
 		}
-
-		return true;
+		return PatternBufferTransfer.insertInputs(container.itemInventory, container.fluidInventory, items, fluids);
 	}
 
 	@Override
@@ -218,6 +215,9 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 								int mouseX, int mouseY, float partialTicks, IRenderContext context) {
 							hovered = isMouseOverElement(mouseX, mouseY);
 							super.drawInBackground(mouseX, mouseY, partialTicks, context);
+							if (selectedPattern[0] == index) {
+								drawBorder(getPosition().x, getPosition().y, 18, 18, 0xFF55AA55, 1);
+							}
 						}
 
 						@Override
@@ -250,7 +250,10 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			detail.addWidget(
 					new LabelWidget(7, 9, "gregifiedenergistics.gui.buffer_contents", new Object[] {index + 1}));
 
-			detail.addWidget(new SlotWidget(patternHandler, index, 142, 5).setBackgroundTexture(GuiTextures.SLOT));
+			int slot = index;
+			detail.addWidget(new SlotWidget(patternHandler, slot, 142, 5)
+					.setBackgroundTexture(GuiTextures.SLOT, GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY)
+					.setChangeListener(() -> patternHandler.onContentsChanged(slot)));
 			detail.addWidget(new CircuitSlotWidget(container.circuitInventory, 164, 5));
 
 			detail.addWidget(new ClickButtonWidget(187, 5, 18, 18, "<", click -> pages.selectPage(0))
@@ -372,10 +375,17 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 			var container = containers[slot];
 			if (pattern != null) {
-				patternToContainer.remove(pattern, container);
+				if (patternToContainer.remove(pattern, container)) {
+					for (int other = 0; other < getSlots(); other++) {
+						if (other != slot && pattern.equals(getPatternDetails(other))) {
+							patternToContainer.put(getPatternDetails(other), containers[other]);
+							break;
+						}
+					}
+				}
 			}
 
-			container.refundItems(true);
+			container.refundItems();
 			container.refundFluids();
 
 			container.setPattern(null);
@@ -471,7 +481,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	 */
 	private class PatternContainer implements INBTSerializable<NBTTagCompound> {
 
-		private final ItemStackHandler itemInventory;
+		private final InfiniteItemStackHandler itemInventory;
 		private final GhostCircuitItemStackHandler circuitInventory;
 		private final PatternBufferDualHandler dualHandler;
 		private FluidTankList fluidInventory;
@@ -483,7 +493,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				@Override
 				protected void onContentsChanged(int slot) {
 					super.onContentsChanged(slot);
-					PatternContainer.this.dualHandler.onContentsChanged();
+					PatternContainer.this.onContentsChanged();
 				}
 			};
 
@@ -492,7 +502,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				public void setCircuitValue(int config) {
 					super.setCircuitValue(config);
 
-					PatternContainer.this.dualHandler.onContentsChanged();
+					PatternContainer.this.onContentsChanged();
 				}
 			};
 
@@ -502,11 +512,18 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			this.circuitInventory.addNotifiableMetaTileEntity(MTEMEPatternBuffer.this);
 		}
 
+		private void onContentsChanged() {
+			dualHandler.onContentsChanged();
+			if (getWorld() != null && !getWorld().isRemote) markDirty();
+		}
+
 		private void notifyController(MultiblockControllerBase controller) {
+			this.dualHandler.addNotifiableMetaTileEntity(controller);
 			this.dualHandler.addToNotifiedList(controller, this.dualHandler, false);
 		}
 
 		private void clearControllerNotifications(MultiblockControllerBase controller) {
+			this.dualHandler.removeNotifiableMetaTileEntity(controller);
 			controller.getNotifiedItemInputList().remove(this.dualHandler);
 			controller.getNotifiedFluidInputList().remove(this.dualHandler);
 		}
@@ -528,21 +545,15 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			}
 
 			this.circuitInventory.setCircuitValue(circuitValue);
-			this.itemInventory.setSize(items);
+			resizeInventories(items, fluids);
+		}
+
+		private void resizeInventories(int items, int fluids) {
+			// A disconnected or full ME network may leave inputs behind after a pattern is removed.
+			// Preserve those resources and keep them accessible in the contents page.
+			PatternBufferTransfer.resizeItems(itemInventory, items);
 			this.dualHandler.onResize();
-
-			List<FluidTank> fluidTanks = new ArrayList<>(fluids);
-			for (int i = 0; i < fluids; ++i) {
-				fluidTanks.add(new FluidTank(Integer.MAX_VALUE) {
-					@Override
-					protected void onContentsChanged() {
-						super.onContentsChanged();
-						PatternContainer.this.dualHandler.onContentsChanged();
-					}
-				});
-			}
-
-			this.fluidInventory = new FluidTankList(false, fluidTanks);
+			this.fluidInventory = PatternBufferTransfer.resizeFluids(fluidInventory, fluids, this::onContentsChanged);
 			this.dualHandler.setFluidDelegate(fluidInventory);
 			this.dualHandler.onContentsChanged();
 			revision++;
@@ -556,22 +567,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			return dualHandler;
 		}
 
-		public void insertItem(ItemStack stack) {
-			if (stack == null || stack.isEmpty()) return;
-
-			GTTransferUtils.insertItem(dualHandler, stack, false);
-		}
-
-		public void insertFluid(FluidStack stack) {
-			if (stack == null || stack.amount <= 0) return;
-
-			int accepted = fluidInventory.fill(stack, false);
-			if (accepted < stack.amount) return;
-
-			fluidInventory.fill(stack, true);
-		}
-
-		public void refundItems(boolean drop) {
+		public void refundItems() {
 			var node = getProxy().getNode();
 			if (node == null) return;
 
@@ -594,13 +590,9 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 				if (remainder == null || remainder.getStackSize() <= 0) {
 					itemInventory.setStackInSlot(i, ItemStack.EMPTY);
 				} else {
-					if (!drop) {
-						itemInventory.setStackInSlot(i, remainder.asItemStackRepresentation());
-						continue;
-					}
-
-					itemInventory.setStackInSlot(i, ItemStack.EMPTY);
-					Block.spawnAsEntity(getWorld(), getPos(), remainder.asItemStackRepresentation());
+					ItemStack remaining = stack.copy();
+					remaining.setCount((int) remainder.getStackSize());
+					itemInventory.setStackInSlot(i, remaining);
 				}
 			}
 		}
@@ -655,15 +647,20 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 			if (data.hasKey("Items", Constants.NBT.TAG_COMPOUND)) {
 				var inventory = data.getCompoundTag("Items");
 				itemInventory.setSize(inventory.getInteger("Size"));
-				dualHandler.onResize();
 				itemInventory.deserializeNBT(inventory);
+				dualHandler.onResize();
 			}
 			if (data.hasKey("Fluids", Constants.NBT.TAG_COMPOUND)) {
-				fluidInventory.deserializeNBT(data.getCompoundTag("Fluids"));
+				NBTTagCompound fluids = data.getCompoundTag("Fluids");
+				resizeInventories(
+						itemInventory.getSlots(),
+						fluids.getTagList("Tanks", NBT.TAG_COMPOUND).tagCount());
+				fluidInventory.deserializeNBT(fluids);
 			}
 			if (data.hasKey("CircuitInventory", Constants.NBT.TAG_COMPOUND)) {
 				circuitInventory.read(data.getCompoundTag("CircuitInventory"));
 			}
+			onContentsChanged();
 		}
 	}
 }

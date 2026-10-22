@@ -120,7 +120,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 
 	@Override
 	public void provideCrafting(ICraftingProviderHelper provider) {
-		if (isWorkingEnabled()) {
+		if (isAttachedToMultiBlock() && isWorkingEnabled()) {
 			for (var pattern : patternHandler.getPatterns()) {
 				if (pattern == null) continue;
 
@@ -136,13 +136,16 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 
 	@Override
 	public boolean pushPattern(ICraftingPatternDetails pattern, InventoryCrafting inventory) {
-		if (!isWorkingEnabled() || !patternHandler.getPatterns().contains(pattern)) return false;
+		if (!isAttachedToMultiBlock()
+				|| !isWorkingEnabled()
+				|| !patternHandler.getPatterns().contains(pattern)) return false;
 
 		int size = inventory.getSizeInventory();
 		List<ItemStack> items = new ArrayList<>(size);
 
 		for (int i = 0; i < size; ++i) {
-			items.add(inventory.getStackInSlot(i));
+			ItemStack stack = inventory.getStackInSlot(i);
+			if (!stack.isEmpty()) items.add(stack.copy());
 		}
 
 		if (!GTTransferUtils.addItemsToItemHandler(importItems, true, items)) {
@@ -399,6 +402,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	@Override
 	public void addInformation(
 			ItemStack stack, @Nullable World player, @NotNull List<String> tooltip, boolean advanced) {
+		super.addInformation(stack, player, tooltip, advanced);
 		tooltip.add(I18n.format("gregifiedenergistics.machine.me_pattern_provider.tooltip"));
 		tooltip.add(I18n.format("gregtech.machine.item_bus.import.tooltip"));
 		tooltip.add(I18n.format("gregtech.universal.tooltip.item_storage_capacity", getInventorySize()));

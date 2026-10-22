@@ -1,9 +1,11 @@
 package com.walhay.gregifiedenergistics.common.gui;
 
+import com.walhay.gregifiedenergistics.GregifiedEnergisticsConfig;
 import com.walhay.gregifiedenergistics.api.patterns.ISubstitutionStorage;
 import gregtech.api.gui.GuiTextures;
 import gregtech.api.gui.IRenderContext;
 import gregtech.api.gui.Widget;
+import gregtech.api.gui.ingredient.IIngredientSlot;
 import gregtech.api.unification.OreDictUnifier;
 import gregtech.api.util.LocalizationUtils;
 import gregtech.api.util.Position;
@@ -19,7 +21,7 @@ import net.minecraft.util.math.MathHelper;
 import org.lwjgl.input.Keyboard;
 
 /** A paged substitution grid and selector, synchronized through the GTCEu container. */
-public class SubstitutionListWidget extends Widget {
+public class SubstitutionListWidget extends Widget implements IIngredientSlot {
 
 	private final ISubstitutionStorage storage;
 	private final Map<String, List<ItemStack>> variants = new HashMap<>();
@@ -39,7 +41,11 @@ public class SubstitutionListWidget extends Widget {
 	}
 
 	private int columns() {
-		return Math.max(1, Math.min(9, getSize().width / 18));
+		return Math.max(
+				1,
+				Math.min(
+						GregifiedEnergisticsConfig.guiConfig.substitutionSlotsPerLine,
+						Math.min(9, getSize().width / 18)));
 	}
 
 	private int pageSize() {
@@ -108,26 +114,36 @@ public class SubstitutionListWidget extends Widget {
 		int x = getPosition().x;
 		int y = getPosition().y;
 		if (selectedName != null) {
-			drawButton(x, y, "<");
+			drawButton(x, y, "<", true);
 			drawItemStack(selectedStack(selectedName), x + 23, y + 1, null);
 		}
 		drawText((page + 1) + "/" + pageCount(), x + 65, y + 5, 1, 0xFF404040);
-		drawButton(x + getSize().width - 40, y, "<");
-		drawButton(x + getSize().width - 18, y, ">");
+		drawButton(x + getSize().width - 40, y, "<", page > 0);
+		drawButton(x + getSize().width - 18, y, ">", page + 1 < pageCount());
+		if (entryCount() == 0) {
+			drawText(LocalizationUtils.format("gregifiedenergistics.gui.substitution_empty"), x, y + 27, 1, 0xFF404040);
+		}
 		for (int cell = 0; cell < pageSize() && page * pageSize() + cell < entryCount(); cell++) {
 			int index = page * pageSize() + cell;
 			int cellX = x + cell % columns() * 18;
 			int cellY = y + 22 + cell / columns() * 18;
 			GuiTextures.SLOT.draw(cellX, cellY, 18, 18);
 			drawItemStack(stackAt(index), cellX + 1, cellY + 1, null);
+			if (hoveredEntry(mouseX, mouseY) == index) drawSelectionOverlay(cellX + 1, cellY + 1, 16, 16);
 			if (selectedName != null && options.getOrDefault(selectedName, 0) == index)
 				drawBorder(cellX, cellY, 18, 18, 0xFF55AA55, 1);
 		}
 	}
 
-	private void drawButton(int x, int y, String text) {
+	private void drawButton(int x, int y, String text, boolean enabled) {
 		GuiTextures.VANILLA_BUTTON.drawSubArea(x, y, 18, 18, 0, 0, 1, 0.5);
-		drawText(text, x + 6, y + 5, 1, 0xFFFFFFFF);
+		drawText(text, x + 6, y + 5, 1, enabled ? 0xFFFFFFFF : 0xFF888888);
+	}
+
+	@Override
+	public Object getIngredientOverMouse(int mouseX, int mouseY) {
+		int index = hoveredEntry(mouseX, mouseY);
+		return index >= 0 && !stackAt(index).isEmpty() ? stackAt(index) : null;
 	}
 
 	@Override
@@ -160,14 +176,14 @@ public class SubstitutionListWidget extends Widget {
 			return true;
 		}
 		int index = hoveredEntry(mouseX, mouseY);
-		if (index < 0 || button > 1) return true;
+		if (index < 0 || button < 0 || button > 1) return true;
 		if (selectedName != null) {
 			select(selectedName, index);
 		} else {
 			String name = names.get(index);
 			if (button == 0 && isShiftDown()) {
 				selectedName = name;
-				page = 0;
+				page = MathHelper.clamp(options.getOrDefault(name, 0) / pageSize(), 0, pageCount() - 1);
 			} else {
 				select(name, options.getOrDefault(name, 0) + (button == 0 ? 1 : -1));
 			}

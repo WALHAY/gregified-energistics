@@ -9,7 +9,7 @@ gregifiedenergistics.machine.me_assembly_line_optical_bus.tooltip=Replaces the f
 gregifiedenergistics.machine.me_assembly_line_optical_bus.optical_pipe=Connect the optical side to a Data Bank with an optical pipe to import Assembly Line recipes.
 
 gregifiedenergistics.machine.me_pattern_buffer.name=ME Pattern Buffer
-gregifiedenergistics.machine.me_pattern_buffer.tooltip=Stores up to 36 encoded patterns and their inputs for an Assembly Line multiblock.
+gregifiedenergistics.machine.me_pattern_buffer.tooltip=Stores up to 36 encoded patterns and their inputs for a recipe multiblock.
 gregifiedenergistics.machine.me_pattern_provider.tooltip=Provides one encoded pattern to the ME network and exports its inputs to the multiblock.
 gregifiedenergistics.machine.me_pattern_provider_iv.name=ME Pattern Provider (IV)
 gregifiedenergistics.machine.me_pattern_provider_luv.name=ME Pattern Provider (LuV)
@@ -50,3 +50,6 @@ gregifiedenergistics.gui.buffer_inventory_hint=Press B or use View to inspect th
 gregifiedenergistics.gui.back=Back to patterns
 gregifiedenergistics.gui.view=View
 gregifiedenergistics.gui.substitution_hint=Click or scroll to cycle; Shift-click to choose a substitution
+
+gregifiedenergistics.gui.view_pattern_contents=Open the selected pattern buffer.
+gregifiedenergistics.gui.substitution_empty=No substitutions available

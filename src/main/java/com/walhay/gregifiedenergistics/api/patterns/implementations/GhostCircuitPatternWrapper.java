@@ -9,6 +9,7 @@ import com.walhay.gregifiedenergistics.api.patterns.IProvidablePattern;
 import gregtech.api.recipes.ingredients.IntCircuitIngredient;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
@@ -25,6 +26,7 @@ public class GhostCircuitPatternWrapper extends AbstractPatternHelper {
 	private GhostCircuitPatternWrapper(@NotNull ICraftingPatternDetails pattern) {
 		this.pattern = pattern;
 		Optional<ItemStack> stack = Arrays.stream(pattern.getInputs())
+				.filter(Objects::nonNull)
 				.map(IAEItemStack::getDefinition)
 				.filter(IntCircuitIngredient::isIntegratedCircuit)
 				.findFirst();
@@ -32,7 +34,7 @@ public class GhostCircuitPatternWrapper extends AbstractPatternHelper {
 	}
 
 	public static ICraftingPatternDetails wrap(ICraftingPatternDetails pattern) {
-		if (pattern != null && hasCircuit(pattern.getInputs())) {
+		if (pattern != null && !pattern.isCraftable() && hasCircuit(pattern.getInputs())) {
 			return new GhostCircuitPatternWrapper(pattern);
 		}
 		return pattern;
@@ -42,12 +44,15 @@ public class GhostCircuitPatternWrapper extends AbstractPatternHelper {
 		if (inputs == null || inputs.length == 0) return false;
 
 		return Arrays.stream(inputs)
+				.filter(Objects::nonNull)
 				.map(IAEItemStack::getDefinition)
 				.anyMatch(IntCircuitIngredient::isIntegratedCircuit);
 	}
 
 	protected static IAEItemStack[] filterCircuits(IAEItemStack[] inputs) {
+		if (inputs == null) return new IAEItemStack[0];
 		return Arrays.stream(inputs)
+				.filter(Objects::nonNull)
 				.filter(stack -> !IntCircuitIngredient.isIntegratedCircuit(stack.getDefinition()))
 				.toArray(IAEItemStack[]::new);
 	}

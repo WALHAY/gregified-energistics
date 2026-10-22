@@ -56,10 +56,19 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 	protected WidgetGroup createPatternList() {
 		WidgetGroup page = new WidgetGroup(0, 0, 199, 109);
 		page.addWidget(new LabelWidget(7, 7, "gregifiedenergistics.gui.pattern_list"));
-		ScrollableListWidget list = new ScrollableListWidget(58, 22, 83, 82);
-		for (int firstSlot = 0; firstSlot < patternHandler.getSlots(); firstSlot += 4) {
-			WidgetGroup row = new WidgetGroup(0, 0, 72, 18);
-			for (int column = 0; column < 4 && firstSlot + column < patternHandler.getSlots(); column++) {
+		int configuredColumns = GregifiedEnergisticsConfig.guiConfig.patternSlotsPerLine;
+		int columns = Math.max(
+				1,
+				Math.min(
+						9,
+						configuredColumns == 0
+								? (int) Math.ceil(Math.sqrt(patternHandler.getSlots()))
+								: configuredColumns));
+		int gridWidth = columns * 18;
+		ScrollableListWidget list = new ScrollableListWidget((199 - gridWidth - 11) / 2, 22, gridWidth + 11, 82);
+		for (int firstSlot = 0; firstSlot < patternHandler.getSlots(); firstSlot += columns) {
+			WidgetGroup row = new WidgetGroup(0, 0, gridWidth, 18);
+			for (int column = 0; column < columns && firstSlot + column < patternHandler.getSlots(); column++) {
 				int index = firstSlot + column;
 				row.addWidget(new SlotWidget(patternHandler, index, column * 18, 0)
 						.setBackgroundTexture(GuiTextures.SLOT, GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY)
