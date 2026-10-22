@@ -25,10 +25,8 @@ import gregtech.api.gui.ModularUI;
 import gregtech.api.gui.resources.TextureArea;
 import gregtech.api.gui.widgets.SlotWidget;
 import gregtech.api.gui.widgets.ToggleButtonWidget;
-import gregtech.api.items.itemhandlers.GTItemStackHandler;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
-import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.MultiblockControllerBase;
@@ -49,6 +47,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.World;
@@ -198,12 +197,12 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	}
 
 	@Override
-	public void registerAbilities(@NotNull AbilityInstances ability) {
+	public void registerAbilities(@NotNull List<IItemHandlerModifiable> ability) {
 		ability.add(actualImportItems);
 	}
 
 	@Override
-	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
+	public void clearMachineInventory(@NotNull NonNullList<ItemStack> itemBuffer) {
 		super.clearMachineInventory(itemBuffer);
 		clearInventory(itemBuffer, patternHandler);
 	}
@@ -280,7 +279,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 			builder.widget(new SlotWidget(importItems, slot, startX + index % rowSize * 18, 18 + index / rowSize * 18)
 					.setBackgroundTexture(GuiTextures.SLOT)
 					.setChangeListener(() -> {
-						if (importItems instanceof GTItemStackHandler handler) handler.onContentsChanged(slot);
+						if (importItems instanceof NotifiableItemStackHandler handler) handler.onContentsChanged(slot);
 					}));
 		}
 		int buttonX = backgroundWidth - 25;

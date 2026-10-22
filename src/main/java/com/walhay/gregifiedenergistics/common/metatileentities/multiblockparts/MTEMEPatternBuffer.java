@@ -46,7 +46,6 @@ import gregtech.api.gui.widgets.ToggleButtonWidget;
 import gregtech.api.gui.widgets.WidgetGroup;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
-import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.MultiblockControllerBase;
@@ -63,6 +62,7 @@ import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.Constants;
@@ -117,7 +117,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	}
 
 	@Override
-	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
+	public void clearMachineInventory(@NotNull NonNullList<ItemStack> itemBuffer) {
 		super.clearMachineInventory(itemBuffer);
 		for (var container : patternHandler) {
 			for (int slot = 0; slot < container.itemInventory.getSlots(); slot++) {
@@ -308,7 +308,7 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 	}
 
 	@Override
-	public void registerAbilities(@NotNull AbilityInstances ability) {
+	public void registerAbilities(@NotNull List<IItemHandlerModifiable> ability) {
 		patternHandler.getContainers().stream()
 				.map(PatternContainer::dualInventory)
 				.forEach(ability::add);
@@ -519,13 +519,13 @@ public class MTEMEPatternBuffer extends MetaTileEntityCraftingProvider<IAEItemSt
 
 		private void notifyController(MultiblockControllerBase controller) {
 			this.dualHandler.addNotifiableMetaTileEntity(controller);
-			this.dualHandler.addToNotifiedList(controller, this.dualHandler, false);
+			this.dualHandler.onContentsChanged();
 		}
 
 		private void clearControllerNotifications(MultiblockControllerBase controller) {
 			this.dualHandler.removeNotifiableMetaTileEntity(controller);
 			controller.getNotifiedItemInputList().remove(this.dualHandler);
-			controller.getNotifiedFluidInputList().remove(this.dualHandler);
+			controller.getNotifiedFluidInputList().remove(this.dualHandler.getFluidDelegate());
 		}
 
 		public void setPattern(ICraftingPatternDetails pattern) {

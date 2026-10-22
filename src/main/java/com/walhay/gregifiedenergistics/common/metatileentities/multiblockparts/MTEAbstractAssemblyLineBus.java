@@ -41,7 +41,6 @@ import gregtech.api.gui.widgets.TabGroup;
 import gregtech.api.gui.widgets.ToggleButtonWidget;
 import gregtech.api.gui.widgets.WidgetGroup;
 import gregtech.api.gui.widgets.tab.ItemTabInfo;
-import gregtech.api.metatileentity.multiblock.AbilityInstances;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
@@ -63,6 +62,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.World;
@@ -115,7 +115,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	}
 
 	@Override
-	public void clearMachineInventory(@NotNull List<@NotNull ItemStack> itemBuffer) {
+	public void clearMachineInventory(@NotNull NonNullList<ItemStack> itemBuffer) {
 		super.clearMachineInventory(itemBuffer);
 		clearInventory(itemBuffer, importItems);
 		if (hasItemsToSend()) {
@@ -350,7 +350,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	}
 
 	@Override
-	public void registerAbilities(@NotNull AbilityInstances abilityInstances) {
+	public void registerAbilities(@NotNull List<IItemHandlerModifiable> abilityInstances) {
 		abilityInstances.add(importItems);
 	}
 

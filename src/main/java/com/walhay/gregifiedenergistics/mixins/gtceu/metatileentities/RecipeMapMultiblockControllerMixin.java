@@ -2,11 +2,13 @@ package com.walhay.gregifiedenergistics.mixins.gtceu.metatileentities;
 
 import com.walhay.gregifiedenergistics.api.capability.PatternBufferDualHandler;
 import com.walhay.gregifiedenergistics.api.capability.SegmentItemHandlerList;
+import com.walhay.gregifiedenergistics.api.util.PatternBufferFluidInputs;
 import gregtech.api.capability.IMultipleTankHandler;
-import gregtech.api.capability.impl.ItemHandlerList;
+import gregtech.api.capability.impl.FluidTankList;
+import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
-import java.util.Collection;
-import net.minecraftforge.items.IItemHandler;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -15,38 +17,36 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** RecipeMapMultiblockControllerMixin */
+/** Keeps dynamic pattern inputs visible to the GTCEu 2.8.10 controller. */
 @Mixin(value = RecipeMapMultiblockController.class, remap = false)
 public abstract class RecipeMapMultiblockControllerMixin {
 	@Shadow
 	protected IItemHandlerModifiable inputInventory;
 
 	@Shadow
-	protected IMultipleTankHandler extendedFluidInputs;
-
-	@Shadow
 	protected IMultipleTankHandler inputFluidInventory;
 
 	@Shadow
-	protected abstract IMultipleTankHandler extendedImportFluidList(IMultipleTankHandler fluids);
+	protected abstract boolean allowSameFluidFillForOutputs();
 
 	@Inject(method = "initializeAbilities", at = @At("TAIL"))
-	public void createSegmentHandlerList(CallbackInfo ci) {
-		if (this.inputInventory instanceof ItemHandlerList list) {
-			Collection<IItemHandler> handlers = list.getBackingHandlers();
-
-			boolean found = handlers.stream().anyMatch(handler -> handler instanceof PatternBufferDualHandler);
-			if (found) {
-				this.inputInventory = new SegmentItemHandlerList(handlers);
-			}
+	private void createSegmentHandlerList(CallbackInfo ci) {
+		var controller = (RecipeMapMultiblockController) (Object) this;
+		List<IItemHandlerModifiable> handlers = controller.getAbilities(MultiblockAbility.IMPORT_ITEMS);
+		if (handlers.stream().anyMatch(handler -> handler instanceof PatternBufferDualHandler)) {
+			this.inputInventory = new SegmentItemHandlerList(new ArrayList<>(handlers));
 		}
 	}
 
 	@Inject(method = "getInputFluidInventory", at = @At("HEAD"))
 	private void refreshPatternBufferFluids(CallbackInfoReturnable<IMultipleTankHandler> cir) {
-		// Pattern-buffer tanks are created when patterns change, after the controller initially forms.
 		if (this.inputInventory instanceof SegmentItemHandlerList) {
-			this.extendedFluidInputs = this.extendedImportFluidList(this.inputFluidInventory);
+			var controller = (RecipeMapMultiblockController) (Object) this;
+			IMultipleTankHandler fluids = new FluidTankList(
+					allowSameFluidFillForOutputs(), controller.getAbilities(MultiblockAbility.IMPORT_FLUIDS));
+			this.inputFluidInventory = controller.isDistinct()
+					? fluids
+					: PatternBufferFluidInputs.combine(fluids, controller.getAbilities(MultiblockAbility.IMPORT_ITEMS));
 		}
 	}
 }

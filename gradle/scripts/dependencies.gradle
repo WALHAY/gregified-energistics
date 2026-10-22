@@ -70,9 +70,9 @@ dependencies {
     //     transitive = false
     // }
 
-	implementation files("libs/gregtech-1.12.2-${propertyString('gtceu_version')}-dev.jar")
-
 	implementation("com.cleanroommc:modularui:2.5.0-rc4") { transitive = false }
+
+	implementation rfg.deobf("curse.maven:gregtech-ce-unofficial-557242:5519022")
 
     implementation rfg.deobf("curse.maven:codechicken-lib-1-8-242818:2779848")
 
