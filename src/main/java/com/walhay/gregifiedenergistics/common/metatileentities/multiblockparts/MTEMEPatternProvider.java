@@ -170,7 +170,7 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 
 	@Override
 	protected IItemHandlerModifiable createImportItemHandler() {
-		return new NotifiableItemStackHandler(this, getInventorySize(), getController(), false);
+		return new NotifiableItemStackHandler(this, getInventorySize(), this, false);
 	}
 
 	@Override
@@ -181,6 +181,11 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	@Override
 	public void addToMultiBlock(MultiblockControllerBase controller) {
 		super.addToMultiBlock(controller);
+		// GregTech's automatic registration cannot see the handler inside actualImportItems.
+		if (importItems instanceof NotifiableItemStackHandler handler) {
+			handler.addNotifiableMetaTileEntity(controller);
+			handler.addToNotifiedList(controller, handler, false);
+		}
 		this.circuitInventory.addNotifiableMetaTileEntity(controller);
 		this.circuitInventory.addToNotifiedList(this, this.circuitInventory, false);
 	}
@@ -188,7 +193,12 @@ public class MTEMEPatternProvider extends MetaTileEntityCraftingProvider<IAEItem
 	@Override
 	public void removeFromMultiBlock(MultiblockControllerBase controller) {
 		super.removeFromMultiBlock(controller);
+		if (importItems instanceof NotifiableItemStackHandler handler) {
+			handler.removeNotifiableMetaTileEntity(controller);
+			controller.getNotifiedItemInputList().remove(handler);
+		}
 		this.circuitInventory.removeNotifiableMetaTileEntity(controller);
+		controller.getNotifiedItemInputList().remove(this.circuitInventory);
 	}
 
 	@Override

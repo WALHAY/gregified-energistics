@@ -26,3 +26,8 @@ run
 
 # mac
 .DS_Store
+
+# Local Minecraft MCP installation
+tools/minecraft-mcp/node_modules/
+tools/minecraft-mcp/**/__pycache__/
+.codex/config.toml
