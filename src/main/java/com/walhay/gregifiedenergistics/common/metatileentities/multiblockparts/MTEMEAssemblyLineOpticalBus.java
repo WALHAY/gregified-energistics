@@ -58,14 +58,16 @@ public class MTEMEAssemblyLineOpticalBus extends MTEAbstractAssemblyLineBus impl
 	@Override
 	public void addToolUsages(ItemStack stack, World world, List<String> tooltip, boolean advanced) {
 		super.addToolUsages(stack, world, tooltip, advanced);
-		tooltip.add(I18n.format("gregifiedenergistics.tool_action.screwdriwer.optical_facing"));
+		tooltip.add(I18n.format("gregifiedenergistics.tool_action.screwdriver.optical_facing"));
 	}
 
 	@Override
 	public boolean onScrewdriverClick(
 			EntityPlayer playerIn, EnumHand hand, EnumFacing facing, CuboidRayTraceResult hitResult) {
 		if (opticalFacing != facing) {
+			if (getWorld().isRemote) return true;
 			opticalFacing = facing;
+			markDirty();
 			writeCustomData(CHANGE_OPTICAL_SIDE, buf -> buf.writeEnumValue(opticalFacing));
 			updatePatternData();
 			return true;
@@ -90,7 +92,8 @@ public class MTEMEAssemblyLineOpticalBus extends MTEAbstractAssemblyLineBus impl
 	@Override
 	public void readFromNBT(NBTTagCompound data) {
 		super.readFromNBT(data);
-		opticalFacing = EnumFacing.byName(data.getString(OPTICAL_FACING_TAG));
+		EnumFacing savedFacing = EnumFacing.byName(data.getString(OPTICAL_FACING_TAG));
+		opticalFacing = savedFacing == null ? EnumFacing.DOWN : savedFacing;
 	}
 
 	@Override

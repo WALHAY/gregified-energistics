@@ -6,9 +6,13 @@ import appeng.api.networking.crafting.ICraftingPatternDetails;
 import appeng.items.misc.ItemEncodedPattern;
 import com.walhay.gregifiedenergistics.GregifiedEnergisticsConfig;
 import com.walhay.gregifiedenergistics.api.capability.AbstractPatternItemHandler;
+import com.walhay.gregifiedenergistics.api.gui.GregifiedEnergisticsGuiTextures;
 import com.walhay.gregifiedenergistics.api.patterns.implementations.DataStickPatternHelper;
-import com.walhay.gregifiedenergistics.common.gui.DataStickGridWidget;
-import gregtech.api.gui.widgets.AbstractWidgetGroup;
+import gregtech.api.gui.GuiTextures;
+import gregtech.api.gui.widgets.LabelWidget;
+import gregtech.api.gui.widgets.ScrollableListWidget;
+import gregtech.api.gui.widgets.SlotWidget;
+import gregtech.api.gui.widgets.WidgetGroup;
 import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
 import gregtech.api.util.AssemblyLineManager;
@@ -50,10 +54,31 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 	}
 
 	@Override
-	protected AbstractWidgetGroup createPatternsGrid() {
-		int slotsPerLine = GregifiedEnergisticsConfig.guiConfig.patternSlotsPerLine;
-		if (slotsPerLine == 0) slotsPerLine = (int) Math.sqrt(patternHandler.getSlots());
-		return new DataStickGridWidget(slotsPerLine, patternHandler);
+	protected WidgetGroup createPatternList() {
+		WidgetGroup page = new WidgetGroup(0, 0, 199, 109);
+		page.addWidget(new LabelWidget(7, 7, "gregifiedenergistics.gui.pattern_list"));
+		int configuredColumns = GregifiedEnergisticsConfig.guiConfig.patternSlotsPerLine;
+		int columns = Math.max(
+				1,
+				Math.min(
+						9,
+						configuredColumns == 0
+								? (int) Math.ceil(Math.sqrt(patternHandler.getSlots()))
+								: configuredColumns));
+		int gridWidth = columns * 18;
+		ScrollableListWidget list = new ScrollableListWidget((199 - gridWidth - 11) / 2, 22, gridWidth + 11, 82);
+		for (int firstSlot = 0; firstSlot < patternHandler.getSlots(); firstSlot += columns) {
+			WidgetGroup row = new WidgetGroup(0, 0, gridWidth, 18);
+			for (int column = 0; column < columns && firstSlot + column < patternHandler.getSlots(); column++) {
+				int index = firstSlot + column;
+				row.addWidget(new SlotWidget(patternHandler, index, column * 18, 0)
+						.setBackgroundTexture(GuiTextures.SLOT, GregifiedEnergisticsGuiTextures.PATTERN_OVERLAY)
+						.setChangeListener(() -> patternHandler.onContentsChanged(index)));
+			}
+			list.addWidget(row);
+		}
+		page.addWidget(list);
+		return page;
 	}
 
 	@Override
@@ -90,7 +115,7 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 	}
 
 	@Override
-	public void clearMachineInventory(NonNullList<ItemStack> itemBuffer) {
+	public void clearMachineInventory(@NotNull NonNullList<ItemStack> itemBuffer) {
 		super.clearMachineInventory(itemBuffer);
 		clearInventory(itemBuffer, patternHandler);
 	}
@@ -103,7 +128,7 @@ public class MTEMEAssemblyLineBus extends MTEAbstractAssemblyLineBus {
 	class DataStickHandler extends AbstractPatternItemHandler {
 
 		public DataStickHandler(int size) {
-			super(size);
+			super(MTEMEAssemblyLineBus.this, size);
 		}
 
 		@Override

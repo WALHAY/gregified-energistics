@@ -1,5 +1,6 @@
 package com.walhay.gregifiedenergistics.common.metatileentities.multiblockparts;
 
+import static com.walhay.gregifiedenergistics.api.gui.GregifiedEnergisticsGuiTextures.BLOCKING_MODE;
 import static com.walhay.gregifiedenergistics.api.patterns.substitutions.SubstitutionStorage.STORAGE_TAG;
 import static com.walhay.gregifiedenergistics.api.util.BlockingMode.BLOCKING_MODE_TAG;
 
@@ -7,42 +8,43 @@ import appeng.api.AEApi;
 import appeng.api.config.Actionable;
 import appeng.api.networking.crafting.ICraftingPatternDetails;
 import appeng.api.networking.crafting.ICraftingProviderHelper;
-import appeng.api.networking.events.MENetworkCraftingPatternChange;
 import appeng.api.storage.channels.IFluidStorageChannel;
 import appeng.api.storage.data.IAEFluidStack;
 import appeng.me.GridAccessException;
 import appeng.util.InventoryAdaptor;
-import appeng.util.Platform;
 import appeng.util.inv.AdaptorItemHandler;
 import codechicken.lib.raytracer.CuboidRayTraceResult;
 import codechicken.lib.render.CCRenderState;
 import codechicken.lib.render.pipeline.IVertexOperation;
 import codechicken.lib.vec.Matrix4;
-import com.walhay.gregifiedenergistics.GregifiedEnergisticsConfig;
+import com.walhay.gregifiedenergistics.api.gui.ItemToggleButtonWidget;
 import com.walhay.gregifiedenergistics.api.metatileentity.MetaTileEntityCraftingProvider;
 import com.walhay.gregifiedenergistics.api.patterns.AbstractPatternHelper;
 import com.walhay.gregifiedenergistics.api.patterns.ISubstitutionNotifiable;
 import com.walhay.gregifiedenergistics.api.patterns.ISubstitutionStorage;
 import com.walhay.gregifiedenergistics.api.patterns.substitutions.SubstitutionStorage;
 import com.walhay.gregifiedenergistics.api.util.BlockingMode;
-import com.walhay.gregifiedenergistics.client.gui.GregifiedEnergisticsGuiTextures;
 import com.walhay.gregifiedenergistics.client.render.GregifiedEnergisticsTextures;
 import com.walhay.gregifiedenergistics.common.gui.SubstitutionListWidget;
 import gregtech.api.capability.GregtechDataCodes;
 import gregtech.api.capability.GregtechTileCapabilities;
+import gregtech.api.capability.impl.GhostCircuitItemStackHandler;
 import gregtech.api.capability.impl.MultiblockRecipeLogic;
 import gregtech.api.capability.impl.NotifiableItemStackHandler;
 import gregtech.api.gui.GuiTextures;
 import gregtech.api.gui.ModularUI;
-import gregtech.api.gui.ModularUI.Builder;
-import gregtech.api.gui.widgets.*;
-import gregtech.api.gui.widgets.TabGroup.TabLocation;
+import gregtech.api.gui.widgets.ImageCycleButtonWidget;
+import gregtech.api.gui.widgets.ImageWidget;
+import gregtech.api.gui.widgets.LabelWidget;
+import gregtech.api.gui.widgets.SlotWidget;
+import gregtech.api.gui.widgets.TabGroup;
+import gregtech.api.gui.widgets.ToggleButtonWidget;
+import gregtech.api.gui.widgets.WidgetGroup;
 import gregtech.api.gui.widgets.tab.ItemTabInfo;
 import gregtech.api.metatileentity.multiblock.IMultiblockAbilityPart;
 import gregtech.api.metatileentity.multiblock.MultiblockAbility;
 import gregtech.api.metatileentity.multiblock.RecipeMapMultiblockController;
 import gregtech.api.util.Position;
-import gregtech.api.util.Size;
 import gregtech.client.renderer.texture.cube.SimpleOverlayRenderer;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import java.util.Collection;
@@ -52,6 +54,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -61,13 +64,14 @@ import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.util.Constants.NBT;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.IFluidTank;
 import net.minecraftforge.items.IItemHandlerModifiable;
+import org.jetbrains.annotations.NotNull;
 
 public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingProvider<IAEFluidStack>
 		implements IMultiblockAbilityPart<IItemHandlerModifiable>, ISubstitutionNotifiable {
@@ -111,19 +115,15 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	}
 
 	@Override
-	public void clearMachineInventory(NonNullList<ItemStack> itemBuffer) {
+	public void clearMachineInventory(@NotNull NonNullList<ItemStack> itemBuffer) {
 		super.clearMachineInventory(itemBuffer);
 		clearInventory(itemBuffer, importItems);
 		if (hasItemsToSend()) {
-			for (ItemStack stack : waitingToSend.values()) {
-				itemBuffer.add(stack);
-			}
+			itemBuffer.addAll(waitingToSend.values());
 
 			waitingToSend = null;
 		}
 	}
-
-	// GUI helpers
 
 	@Override
 	public void addToolUsages(ItemStack stack, World world, List<String> tooltip, boolean advanced) {
@@ -133,120 +133,81 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 
 	@Override
 	protected ModularUI createUI(EntityPlayer player) {
-		ModularUI.Builder builder = createUITemplate(player);
-		return builder.build(getHolder(), player);
+		TabGroup<WidgetGroup> tabs = new TabGroup<>(TabGroup.TabLocation.HORIZONTAL_TOP_LEFT, Position.ORIGIN);
+		WidgetGroup patterns = createPatternList();
+		if (patterns != null) {
+			tabs.addTab(
+					new ItemTabInfo(
+							"gregifiedenergistics.gui.pattern_list",
+							new ItemStack(AEApi.instance()
+									.definitions()
+									.items()
+									.encodedPattern()
+									.maybeItem()
+									.orElse(Items.AIR))),
+					patterns);
+		}
+		WidgetGroup substitutions = new WidgetGroup(0, 0, 199, 109);
+		substitutions.addWidget(new LabelWidget(7, 7, "gregifiedenergistics.gui.substitution_list"));
+		substitutions.addWidget(new SubstitutionListWidget(substitutionStorage, 7, 20, 185, 84));
+		tabs.addTab(
+				new ItemTabInfo(
+						"gregifiedenergistics.gui.substitutions_grid",
+						new ItemStack(AEApi.instance()
+								.definitions()
+								.items()
+								.memoryCard()
+								.maybeItem()
+								.orElse(Items.AIR))),
+				substitutions);
+
+		return ModularUI.builder(GuiTextures.BACKGROUND, 199, 200)
+				.widget(tabs)
+				.widget(createButtonBar())
+				.bindPlayerInventory(player.inventory, GuiTextures.SLOT, 7, 117)
+				.build(getHolder(), player);
 	}
 
-	protected AbstractWidgetGroup createPatternsGrid() {
-		return null;
-	}
-
-	protected AbstractWidgetGroup createSubstitutionGrid() {
-		int slotsPerLine = GregifiedEnergisticsConfig.guiConfig.substitutionSlotsPerLine;
-		return new SubstitutionListWidget(slotsPerLine, substitutionStorage);
-	}
-
-	private ModularUI.Builder createUITemplate(EntityPlayer player) {
-		Size patternsSize = Size.ZERO;
-		Size substitutionSize = Size.ZERO;
-
-		AbstractWidgetGroup patternsGrid = createPatternsGrid();
-		AbstractWidgetGroup substitutionGrid = createSubstitutionGrid();
-
-		if (patternsGrid != null) {
-			patternsSize = patternsGrid.getSize();
-		}
-
-		if (substitutionGrid != null) {
-			substitutionSize = substitutionGrid.getSize();
-		}
-
-		int backgroundWidth = Math.max(176, Math.max(patternsSize.width, substitutionSize.width) + 14);
-
-		int height = Math.max(18 * 4, Math.max(patternsSize.height, substitutionSize.height));
-		int center = backgroundWidth / 2;
-
-		int inventoryStartX = center - 9 - 4 * 18;
-		int inventoryStartY = 40 + height + 12;
-
-		Builder builder = ModularUI.builder(GuiTextures.BACKGROUND, backgroundWidth, 40 + height + 94);
-
-		if (patternsGrid != null || substitutionGrid != null) {
-			TabGroup<AbstractWidgetGroup> tabGroup =
-					new TabGroup<AbstractWidgetGroup>(TabLocation.HORIZONTAL_TOP_LEFT, Position.ORIGIN);
-
-			if (patternsGrid != null) {
-				patternsGrid.setSelfPosition(new Position(center - patternsSize.width / 2, 40));
-
-				tabGroup.addTab(
-						new ItemTabInfo(
-								"gregifiedenergistics.gui.patterns_grid",
-								AEApi.instance()
-										.definitions()
-										.items()
-										.encodedPattern()
-										.maybeStack(1)
-										.get()),
-						patternsGrid);
-			}
-
-			if (substitutionGrid != null) {
-				substitutionGrid.setSelfPosition(new Position(center - substitutionSize.width / 2, 40));
-
-				tabGroup.addTab(
-						new ItemTabInfo(
-								"gregifiedenergistics.gui.substitutions_grid",
-								AEApi.instance()
-										.definitions()
-										.items()
-										.memoryCard()
-										.maybeStack(1)
-										.get()),
-						substitutionGrid);
-			}
-
-			builder.widget(tabGroup);
-		}
-
-		builder.label(10, 5, getMetaFullName());
-
-		builder.dynamicLabel(
-				10,
-				15,
-				() -> isOnline
-						? I18n.format("gregtech.gui.me_network.online")
-						: I18n.format("gregtech.gui.me_network.offline"),
-				0xFFFFFFFF);
-
-		builder.widget(new SlotWidget(importItems, 0, 140, 14)
+	private WidgetGroup createButtonBar() {
+		WidgetGroup buttons = new WidgetGroup(174, 116, 18, 77);
+		buttons.addWidget(new SlotWidget(importItems, 0, 0, 0)
 				.setBackgroundTexture(GuiTextures.SLOT)
-				.setTooltipText(I18n.format("gregifiedenergistics.gui.item_slot")));
-
-		builder.widget(new ImageCycleButtonWidget(
-						-18,
-						6,
-						16,
-						16,
-						GregifiedEnergisticsGuiTextures.BLOCKING_MODE,
+				.setTooltipText("gregifiedenergistics.gui.item_slot"));
+		buttons.addWidget(new ImageCycleButtonWidget(
+						0,
+						18,
+						18,
+						18,
+						BLOCKING_MODE,
 						BlockingMode.values().length,
-						() -> blockingMode.ordinal(),
-						index -> blockingMode = BlockingMode.values()[index])
-				.setTooltipHoverString(index -> I18n.format("gregifiedenergistics.gui."
-						+ BlockingMode.values()[index].toString().toLowerCase())));
-
-		builder.widget(new ToggleButtonWidget(
-						-18,
-						24,
-						16,
-						16,
-						GregifiedEnergisticsGuiTextures.FLUID_MODE,
+						() -> getBlockingMode().ordinal(),
+						option -> {
+							if (option >= 0 && option < BlockingMode.values().length)
+								setBlockingMode(BlockingMode.values()[option]);
+						})
+				.shouldUseBaseBackground()
+				.setTooltipHoverString(option -> switch (BlockingMode.values()[option]) {
+					case NO_BLOCKING -> "gregifiedenergistics.gui.no_blocking";
+					case BLOCKING_MODE -> "gregifiedenergistics.gui.blocking_mode";
+					case CRAFTING_BLOCKING_MODE -> "gregifiedenergistics.gui.crafting_blocking_mode";
+				}));
+		buttons.addWidget(new ItemToggleButtonWidget(
+						0,
+						36,
+						new ItemStack(Items.BUCKET),
+						new ItemStack(Items.WATER_BUCKET),
 						this::getUsingFluids,
 						this::setUsingFluids)
 				.setTooltipText("gregifiedenergistics.gui.fluid_mode"));
+		buttons.addWidget(new ImageWidget(0, 54, 18, 6, GuiTextures.BUTTON_POWER_DETAIL));
+		buttons.addWidget(new ToggleButtonWidget(
+						0, 59, 18, 18, GuiTextures.BUTTON_POWER, this::isWorkingEnabled, this::setWorkingEnabled)
+				.setTooltipText("gregifiedenergistics.gui.working"));
+		return buttons;
+	}
 
-		builder.bindPlayerInventory(player.inventory, GuiTextures.SLOT, inventoryStartX, inventoryStartY);
-
-		return builder;
+	protected WidgetGroup createPatternList() {
+		return null;
 	}
 
 	@Override
@@ -255,24 +216,21 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 		ItemStack heldItem = player.getHeldItem(hand);
 
 		if (AEApi.instance().definitions().items().memoryCard().isSameAs(heldItem)) {
+			if (getWorld().isRemote) return true;
 			if (player.isSneaking()) {
-				var nbt = new NBTTagCompound();
-				heldItem.writeToNBT(nbt);
-
-				nbt.setTag(STORAGE_TAG, substitutionStorage.serializeNBT());
-
-				heldItem.setTagCompound(nbt);
+				heldItem.setTagInfo(STORAGE_TAG, substitutionStorage.serializeNBT());
+				player.inventory.markDirty();
 				player.sendStatusMessage(
-						new TextComponentString(I18n.format("gregifiedenergistics.machine.me.copy_settings")), true);
+						new TextComponentTranslation("gregifiedenergistics.machine.me.copy_settings"), true);
 			} else {
 				var tag = heldItem.getSubCompound(STORAGE_TAG);
 				if (tag != null) {
 					substitutionStorage.deserializeNBT(tag);
 
 					notifySubstitutionChange();
+					markDirty();
 					player.sendStatusMessage(
-							new TextComponentString(I18n.format("gregifiedenergistics.machine.me.paste_settings")),
-							true);
+							new TextComponentTranslation("gregifiedenergistics.machine.me.paste_settings"), true);
 				}
 			}
 			return true;
@@ -293,6 +251,8 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 				NBTTagCompound tag = new NBTTagCompound();
 
 				entry.getValue().writeToNBT(tag);
+				tag.setInteger("StoredCount", entry.getValue().getCount());
+				tag.setByte("Count", (byte) 1);
 				tag.setInteger(SEND_SLOT_TAG, entry.getKey());
 
 				itemList.appendTag(tag);
@@ -319,9 +279,17 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	@Override
 	public void readFromNBT(NBTTagCompound data) {
 		super.readFromNBT(data);
-		workingEnabled = data.getBoolean(WORKING_ENABLED_TAG);
-		blockingMode = BlockingMode.valueOf(data.getString(BLOCKING_MODE_TAG));
-		useFluids = data.getBoolean(USE_FLUID_TAG);
+		if (data.hasKey(WORKING_ENABLED_TAG)) workingEnabled = data.getBoolean(WORKING_ENABLED_TAG);
+		if (data.hasKey(BLOCKING_MODE_TAG)) {
+			try {
+				blockingMode = BlockingMode.valueOf(data.getString(BLOCKING_MODE_TAG));
+			} catch (IllegalArgumentException ignored) {
+				blockingMode = BlockingMode.NO_BLOCKING;
+			}
+		}
+		if (data.hasKey(USE_FLUID_TAG)) useFluids = data.getBoolean(USE_FLUID_TAG);
+		waitingToSend = null;
+		fluidWaitingToSend = null;
 
 		if (data.hasKey(ITEM_TO_SEND_TAG)) {
 			NBTTagList itemList = data.getTagList(ITEM_TO_SEND_TAG, NBT.TAG_COMPOUND);
@@ -331,8 +299,9 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 
 				int slot = tag.getInteger(SEND_SLOT_TAG);
 				ItemStack stack = new ItemStack(tag);
+				if (tag.hasKey("StoredCount", NBT.TAG_INT)) stack.setCount(tag.getInteger("StoredCount"));
 
-				waitingToSend.put(slot, stack);
+				if (!stack.isEmpty() && slot >= 0) addToSendList(slot, stack);
 			}
 		}
 
@@ -345,7 +314,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 				int slot = tag.getInteger(SEND_SLOT_TAG);
 				FluidStack stack = FluidStack.loadFluidStackFromNBT(tag);
 
-				fluidWaitingToSend.put(slot, stack);
+				if (stack != null && stack.amount > 0 && slot >= 0) addToSendList(slot, stack);
 			}
 		}
 	}
@@ -381,8 +350,8 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	}
 
 	@Override
-	public void registerAbilities(List<IItemHandlerModifiable> list) {
-		list.add(importItems);
+	public void registerAbilities(@NotNull List<IItemHandlerModifiable> abilityInstances) {
+		abilityInstances.add(importItems);
 	}
 
 	@Override
@@ -451,8 +420,10 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	// try to push pattern to import buses
 	@Override
 	public boolean pushPattern(ICraftingPatternDetails pattern, InventoryCrafting inventoryCrafting) {
-		if (hasItemsToSend()
-				|| (useFluids && hasFluidsToSend())
+		if (!isWorkingEnabled()
+				|| !isAttachedToMultiBlock()
+				|| hasItemsToSend()
+				|| hasFluidsToSend()
 				|| getProxy() == null
 				|| !getProxy().isActive()) {
 			return false;
@@ -480,9 +451,10 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 						addToSendList(slot++, stack);
 					}
 				}
-				pushFluidsOut();
+				if (hasFluidsToSend()) pushFluidsOut();
 			}
-			pushItemsOut();
+			if (hasItemsToSend()) pushItemsOut();
+			markDirty();
 			return true;
 		}
 
@@ -492,6 +464,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 	// check if buses is able to accept items from pattern
 	private boolean acceptsItems(final InventoryCrafting inventoryCrafting) {
 		List<InventoryAdaptor> inventoryAdaptors = getController().getAbilities(MultiblockAbility.IMPORT_ITEMS).stream()
+				.filter(i -> !(i instanceof GhostCircuitItemStackHandler))
 				.map(AdaptorItemHandler::new)
 				.collect(Collectors.toList());
 		Iterator<InventoryAdaptor> it = inventoryAdaptors.iterator();
@@ -565,7 +538,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 						.getStorage()
 						.getInventory(getStorageChannel())
 						.extractItems(fluidStack, Actionable.SIMULATE, getActionSource());
-				if (!result.equals(fluidStack)) {
+				if (result == null || result.getStackSize() < fluidStack.getStackSize()) {
 					return false;
 				}
 			} catch (GridAccessException e) {
@@ -577,7 +550,9 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 
 	// Push items from auto-crafting to input buses
 	private void pushItemsOut() {
+		if (!isAttachedToMultiBlock() || !hasItemsToSend()) return;
 		List<InventoryAdaptor> inventoryAdaptors = getController().getAbilities(MultiblockAbility.IMPORT_ITEMS).stream()
+				.filter(i -> !(i instanceof GhostCircuitItemStackHandler))
 				.map(AdaptorItemHandler::new)
 				.collect(Collectors.toList());
 
@@ -590,10 +565,11 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 			ItemStack stack = entry.getValue();
 
 			if (stack.isEmpty()) {
+				it.remove();
 				continue;
 			}
 
-			if (index <= inventoryAdaptors.size()) {
+			if (index >= 0 && index < inventoryAdaptors.size()) {
 				ItemStack result = inventoryAdaptors.get(index).addItems(stack);
 				if (result.isEmpty()) {
 					it.remove();
@@ -606,10 +582,11 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 		if (waitingToSend.isEmpty()) {
 			waitingToSend = null;
 		}
+		markDirty();
 	}
 
 	private void pushFluidsOut() {
-		if (getProxy() == null) return;
+		if (getProxy() == null || !isAttachedToMultiBlock() || !hasFluidsToSend()) return;
 
 		List<IFluidTank> inputHandlers = getController().getAbilities(MultiblockAbility.IMPORT_FLUIDS);
 
@@ -622,17 +599,23 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 			int slot = entry.getKey();
 			FluidStack stack = entry.getValue();
 
-			if (stack == null || stack.amount == 0) {
+			if (stack == null || stack.amount <= 0) {
+				it.remove();
 				continue;
 			}
 
-			if (slot < inputHandlers.size()) {
+			if (slot >= 0 && slot < inputHandlers.size()) {
 				try {
+					int accepted = inputHandlers.get(slot).fill(stack, false);
+					if (accepted <= 0) continue;
+					FluidStack request = stack.copy();
+					request.amount = Math.min(stack.amount, accepted);
 					IAEFluidStack extracted = getProxy()
 							.getStorage()
 							.getInventory(getStorageChannel())
 							.extractItems(
-									getStorageChannel().createStack(stack), Actionable.MODULATE, getActionSource());
+									getStorageChannel().createStack(request), Actionable.MODULATE, getActionSource());
+					if (extracted == null || extracted.getStackSize() <= 0) continue;
 					int filled = inputHandlers.get(slot).fill(extracted.getFluidStack(), true);
 					if (filled == stack.amount) {
 						it.remove();
@@ -648,19 +631,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 		if (fluidWaitingToSend.isEmpty()) {
 			fluidWaitingToSend = null;
 		}
-	}
-
-	// notify grid network when patterns should be recalculated
-	public void notifyPatternChange() {
-		if (Platform.isServer() && getProxy() != null) {
-			try {
-				getProxy()
-						.getGrid()
-						.postEvent(new MENetworkCraftingPatternChange(
-								getCraftingProvider(), getProxy().getNode()));
-			} catch (GridAccessException ignored) {
-			}
-		}
+		markDirty();
 	}
 
 	@Override
@@ -684,7 +655,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 		if (waitingToSend == null) {
 			waitingToSend = new Int2ObjectOpenHashMap<>();
 		}
-		waitingToSend.put(slot, stack);
+		waitingToSend.put(slot, stack.copy());
 	}
 
 	public boolean hasItemsToSend() {
@@ -695,7 +666,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 		if (fluidWaitingToSend == null) {
 			fluidWaitingToSend = new Int2ObjectOpenHashMap<>();
 		}
-		fluidWaitingToSend.put(slot, stack);
+		fluidWaitingToSend.put(slot, stack.copy());
 	}
 
 	public boolean hasFluidsToSend() {
@@ -704,6 +675,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 
 	public void setBlockingMode(BlockingMode blockingMode) {
 		this.blockingMode = blockingMode;
+		if (getWorld() != null && !getWorld().isRemote) markDirty();
 	}
 
 	public BlockingMode getBlockingMode() {
@@ -712,6 +684,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 
 	public void setUsingFluids(boolean useFluids) {
 		this.useFluids = useFluids;
+		if (getWorld() != null && !getWorld().isRemote) markDirty();
 	}
 
 	public boolean getUsingFluids() {
@@ -725,6 +698,7 @@ public abstract class MTEAbstractAssemblyLineBus extends MetaTileEntityCraftingP
 		if (world != null && !world.isRemote) {
 			writeCustomData(GregtechDataCodes.WORKING_ENABLED, buf -> buf.writeBoolean(workingEnabled));
 			notifyPatternChange();
+			markDirty();
 		}
 	}
 

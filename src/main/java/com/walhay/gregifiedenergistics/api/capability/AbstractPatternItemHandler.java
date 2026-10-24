@@ -3,26 +3,26 @@ package com.walhay.gregifiedenergistics.api.capability;
 import appeng.api.networking.crafting.ICraftingPatternDetails;
 import appeng.items.misc.ItemEncodedPattern;
 import com.google.common.base.Objects;
+import gregtech.api.items.itemhandlers.GTItemStackHandler;
+import gregtech.api.metatileentity.MetaTileEntity;
 import java.util.Arrays;
 import java.util.Collection;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.items.ItemStackHandler;
 
-public abstract class AbstractPatternItemHandler extends ItemStackHandler {
+public abstract class AbstractPatternItemHandler extends GTItemStackHandler {
 
 	private final ICraftingPatternDetails[] patterns;
 
-	public AbstractPatternItemHandler(int size) {
-		super(size);
+	public AbstractPatternItemHandler(MetaTileEntity mte, int size) {
+		super(mte, size);
 		this.patterns = new ICraftingPatternDetails[size];
 	}
 
 	@Override
-	protected void onContentsChanged(int slot) {
+	public void onContentsChanged(int slot) {
 		super.onContentsChanged(slot);
-
 		ItemStack stack = getStackInSlot(slot);
 		ICraftingPatternDetails pattern = patterns[slot];
 

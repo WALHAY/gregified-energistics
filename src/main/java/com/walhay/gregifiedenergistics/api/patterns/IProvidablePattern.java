@@ -10,10 +10,6 @@ public interface IProvidablePattern extends ICraftingPatternDetails {
 
 	void providePatterns(ICraftingMedium medium, ICraftingProviderHelper helper);
 
-	default boolean isComposite() {
-		return false;
-	}
-
 	default Collection<IProvidablePattern> getProvidedPatterns() {
 		return Collections.singleton(this);
 	}
